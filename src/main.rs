@@ -1,9 +1,29 @@
 use std::io;
 
+#[derive(Eq, PartialEq)]
+enum TokenTypes {
+    Whitespace,
+    LBrace,
+    RBrace,
+    Number,
+    Operator,
+}
+
 struct Token {}
 
 fn lex(source: &str) -> Vec<Token> {
-    unimplemented!();
+    let mut last_word = String::new();
+    let mut last_token_type: TokenTypes;
+    
+    for char in source.chars() {
+        let t_type = match char {
+            ' ' | '\n' | '\t' => TokenTypes::Whitespace,
+            '(' => TokenTypes::LBrace,
+            ')' => TokenTypes::RBrace,
+            '0'..='9' => TokenTypes::Number,
+            '+' | '*' | '-' | '/' => TokenTypes::Operator,
+        };  
+    };
 }
 
 fn shunt(tokens: &Vec<Token>) -> Vec<Token> {
