@@ -1,4 +1,5 @@
 use std::io;
+use std::collections::HashMap;
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 enum TokenTypes {
@@ -44,13 +45,31 @@ fn lex(source: &str) -> Vec<Token> {
     return tokens
 }
 
-fn shunt(tokens: &Vec<Token>) -> Vec<Token> {
+fn shunt(tokens: Vec<Token>) -> Vec<Token> {
+    let OP_PRECEDENCES: HashMap<String, u8> = HashMap::from([
+        ("/".to_owned(), 2), ("*".to_owned(), 2),
+        ("+".to_owned(), 1), ("-".to_owned(), 1),
+        ("(".to_owned(), 0)
+    ]);
+
     let mut op_stack: Vec<Token> = Vec::new();
     let mut result: Vec<Token> = Vec::new();
 
     for token in tokens {
         match token.t_type {
-            _ => unimplemented!()
+            TokenTypes::Number => result.push(token),
+            TokenTypes::LBrace => op_stack.push(token),
+            TokenTypes::Operator => {
+                let current_precedence = OP_PRECEDENCES[&token.t_value];                
+                while !op_stack.is_empty() {
+                    let operator = op_stack.pop().unwrap();
+                    let top_precedence = OP_PRECEDENCES[&operator.t_value];
+                    if top_precedence >= current_precedence {
+                        result.push(operator);
+                    }
+                };
+                op_stack.push(token);
+            }
         };
     };
 
@@ -68,7 +87,7 @@ fn main() {
         .expect("Failed to read input");
 
     let tokens = lex(&input);
-    let shunted = shunt(&tokens);
+    let shunted = shunt(tokens);
     let value = eval(&shunted);
 
     println!("Value of expression: {}", value);
