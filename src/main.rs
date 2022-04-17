@@ -1,27 +1,33 @@
 use std::io;
 
-#[derive(Eq, PartialEq)]
+#[derive(Eq, PartialEq, Debug, Clone, Copy)]
 enum TokenTypes {
     Whitespace,
     LBrace,
     RBrace,
     Number,
     Operator,
+    Null // Used as initial `last_token_value` in lexer
 }
 
-struct Token {}
+#[derive(Debug)]
+struct Token {
+    t_type: TokenTypes,
+    t_value: String
+}
 
 fn lex(source: &str) -> Vec<Token> {
     let mut last_word = String::new();
-    let mut last_token_type: TokenTypes;
+    let mut last_token_type = TokenTypes::Null;
     
-    for char in source.chars() {
-        let t_type = match char {
-            ' ' | '\n' | '\t' => TokenTypes::Whitespace,
+    for c in source.chars() {
+        let t_type = match c {
+            ' ' | '\n' | '\t' | '\r' => TokenTypes::Whitespace,
             '(' => TokenTypes::LBrace,
             ')' => TokenTypes::RBrace,
             '0'..='9' => TokenTypes::Number,
             '+' | '*' | '-' | '/' => TokenTypes::Operator,
+            _ => panic!("Invalid token")
         };  
     };
 }
