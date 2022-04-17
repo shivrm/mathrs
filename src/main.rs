@@ -69,9 +69,30 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
                     }
                 };
                 op_stack.push(token);
-            }
+            },
+            TokenTypes::RBrace => {
+                loop {
+                    if op_stack.is_empty() {
+                        panic!("Mismatched Parentheses");
+                    }
+
+                    let top_op = op_stack.pop().unwrap();
+
+                    if top_op.t_type == TokenTypes::LBrace {
+                        break;
+                    } else {
+                        result.push(top_op);
+                    }
+                }
+            },
+            TokenTypes::Whitespace => {},
+            _ => panic!("Unhandled token type: {:?}", token.t_type)
         };
     };
+
+    while !op_stack.is_empty() {
+        result.push(op_stack.pop().unwrap());
+    }
 
     return result
 }
