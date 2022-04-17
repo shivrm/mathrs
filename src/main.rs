@@ -17,6 +17,7 @@ struct Token {
 }
 
 fn lex(source: &str) -> Vec<Token> {
+    let mut tokens: Vec<Token> = Vec::new();
     let mut last_word = String::new();
     let mut last_token_type = TokenTypes::Null;
     
@@ -28,8 +29,19 @@ fn lex(source: &str) -> Vec<Token> {
             '0'..='9' => TokenTypes::Number,
             '+' | '*' | '-' | '/' => TokenTypes::Operator,
             _ => panic!("Invalid token")
-        };  
+        };
+
+        if t_type == last_token_type {
+            last_word.push(c);
+        } else {
+            let token = Token{t_type: last_token_type, t_value: last_word};
+            last_token_type = t_type;
+            tokens.push(token);
+            last_word = String::from(c);
+        }
     };
+
+    return tokens
 }
 
 fn shunt(tokens: &Vec<Token>) -> Vec<Token> {
