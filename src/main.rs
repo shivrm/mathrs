@@ -45,7 +45,16 @@ fn lex(source: &str) -> Vec<Token> {
 }
 
 fn shunt(tokens: &Vec<Token>) -> Vec<Token> {
-    unimplemented!();
+    let mut op_stack: Vec<Token> = Vec::new();
+    let mut result: Vec<Token> = Vec::new();
+
+    for token in tokens {
+        match token.t_type {
+            _ => unimplemented!()
+        };
+    };
+
+    return result
 }
 
 fn eval(tokens: &Vec<Token>) -> f64 {
