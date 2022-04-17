@@ -37,7 +37,10 @@ fn lex(source: &str) -> Vec<Token> {
         } else {
             let token = Token{t_type: last_token_type, t_value: last_word};
             last_token_type = t_type;
-            tokens.push(token);
+            
+            if token.t_type != TokenTypes::Null {
+                tokens.push(token);
+            }
             last_word = String::from(c);
         }
     };
@@ -49,7 +52,6 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
     let OP_PRECEDENCES: HashMap<String, u8> = HashMap::from([
         ("/".to_owned(), 2), ("*".to_owned(), 2),
         ("+".to_owned(), 1), ("-".to_owned(), 1),
-        ("(".to_owned(), 0)
     ]);
 
     let mut op_stack: Vec<Token> = Vec::new();
@@ -63,6 +65,12 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
                 let current_precedence = OP_PRECEDENCES[&token.t_value];                
                 while !op_stack.is_empty() {
                     let operator = op_stack.pop().unwrap();
+                    
+                    if operator.t_type == TokenTypes::LBrace {
+                        op_stack.push(operator);
+                        break;
+                    }
+                    
                     let top_precedence = OP_PRECEDENCES[&operator.t_value];
                     if top_precedence >= current_precedence {
                         result.push(operator);
