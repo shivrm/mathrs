@@ -22,15 +22,20 @@ const NON_GROUPING_TYPES: &'static [TokenTypes] = &[
 #[derive(Debug)]
 struct Token {
     t_type: TokenTypes,
-    t_value: String
+    t_value: String,
+    
+    row: usize,
+    col_start: usize,
+    col_end: usize,
 }
 
 fn lex(source: &str) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut last_word = String::new();
     let mut last_token_type = TokenTypes::Null;
-    
-    for c in source.chars() {
+    let mut last_token_start: usize = 0;
+
+    for (i, c) in source.chars().enumerate() {
         // Interpret character as correct type
         let t_type = match c {
             ' ' | '\n' | '\t' | '\r' => TokenTypes::Whitespace,
@@ -44,8 +49,15 @@ fn lex(source: &str) -> Vec<Token> {
         if t_type == last_token_type {
             // If token is non-grouping, then add it as a seperate token
             if let Some(_) = NON_GROUPING_TYPES.iter().position(|&t| t == last_token_type) {
-                let token = Token{t_type: last_token_type, t_value: last_word};
+                let token = Token{
+                    t_type: last_token_type,
+                    t_value: last_word,
+                    row: 1,
+                    col_start: last_token_start,
+                    col_end: i
+                };
                 last_token_type = t_type;
+                last_token_start = i;
 
                 tokens.push(token);
                 last_word = String::new();
@@ -53,16 +65,23 @@ fn lex(source: &str) -> Vec<Token> {
         
             last_word.push(c);
         } else {
-            let token = Token{t_type: last_token_type, t_value: last_word};
+            let token = Token{
+                t_type: last_token_type,
+                t_value: last_word,
+                row: 1,
+                col_start: last_token_start,
+                col_end: i
+            };
+
             last_token_type = t_type;
-            
+            last_token_start = i;
+
             if token.t_type != TokenTypes::Null {
                 tokens.push(token);
             }
             last_word = String::from(c);
         }
     };
-
     return tokens
 }
 
