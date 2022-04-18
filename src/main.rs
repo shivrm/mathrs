@@ -11,6 +11,12 @@ enum TokenTypes {
     Null // Used as initial `last_token_value` in lexer
 }
 
+const NON_GROUPING_TYPES: &'static [TokenTypes] = &[
+    TokenTypes::LBrace,
+    TokenTypes::RBrace,
+    TokenTypes::Operator
+];
+
 #[derive(Debug)]
 struct Token {
     t_type: TokenTypes,
@@ -33,6 +39,14 @@ fn lex(source: &str) -> Vec<Token> {
         };
 
         if t_type == last_token_type {
+            if let Some(_) = NON_GROUPING_TYPES.iter().position(|&t| t == last_token_type) {
+                let token = Token{t_type: last_token_type, t_value: last_word};
+                last_token_type = t_type;
+
+                tokens.push(token);
+                last_word = String::from(c);
+            }
+
             last_word.push(c);
         } else {
             let token = Token{t_type: last_token_type, t_value: last_word};
