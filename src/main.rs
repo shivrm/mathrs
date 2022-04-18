@@ -187,9 +187,17 @@ fn eval(tokens: &Vec<Token>) -> f64 {
 
 fn main() {
     let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
+    let mut line = String::new();
+
+    loop {
+        io::stdin()
+        .read_line(&mut line)
         .expect("Failed to read input");
+
+        if line.trim().len() == 0 {break;}
+        input = input + &line;
+        line.clear();
+    }
 
     let tokens = lex(&input);
     let shunted = shunt(tokens);
