@@ -130,10 +130,29 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
 }
 
 fn eval(tokens: &Vec<Token>) -> f64 {
-    let result: Vec<f64> = Vec::new();
+    let mut result: Vec<f64> = Vec::new();
 
     for token in tokens {
         match token.t_type {
+            TokenTypes::Number => {
+                let as_float: f64 = token.t_value.parse().unwrap();
+                result.push(as_float);
+            }
+            TokenTypes::Operator => {
+                // Shunting-yard algorithm, being stack based, puts the
+                // later operand on top. So right comes on top of left
+                let right = result.pop().unwrap();
+                let left = result.pop().unwrap();
+
+                let value = match &token.t_value[..] {
+                    "+" => left + right,
+                    "-" => left - right,
+                    "*" => left * right,
+                    "/" => left / right,
+                    _ => panic!("Unhandled operator")
+                };
+                result.push(value);
+            }
             _ => unimplemented!()
         }
     };
