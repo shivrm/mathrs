@@ -34,11 +34,17 @@ fn lex(source: &str) -> Vec<Token> {
     let mut last_word = String::new();
     let mut last_token_type = TokenTypes::Null;
     let mut last_token_start: usize = 0;
+    let mut row = 1;
 
     for (i, c) in source.chars().enumerate() {
         // Interpret character as correct type
         let t_type = match c {
-            ' ' | '\n' | '\t' | '\r' => TokenTypes::Whitespace,
+            ' ' | '\n' | '\t' | '\r' => {
+                if c == '\n' {
+                    row += 1;
+                }
+                TokenTypes::Whitespace
+            },
             '(' => TokenTypes::LBrace,
             ')' => TokenTypes::RBrace,
             '0'..='9' => TokenTypes::Number,
@@ -52,7 +58,7 @@ fn lex(source: &str) -> Vec<Token> {
                 let token = Token{
                     t_type: last_token_type,
                     t_value: last_word,
-                    row: 1,
+                    row: row,
                     col_start: last_token_start,
                     col_end: i
                 };
@@ -68,7 +74,7 @@ fn lex(source: &str) -> Vec<Token> {
             let token = Token{
                 t_type: last_token_type,
                 t_value: last_word,
-                row: 1,
+                row: row,
                 col_start: last_token_start,
                 col_end: i
             };
