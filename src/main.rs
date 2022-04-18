@@ -130,7 +130,15 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
 }
 
 fn eval(tokens: &Vec<Token>) -> f64 {
-    unimplemented!();
+    let result: Vec<f64> = Vec::new();
+
+    for token in tokens {
+        match token.t_type {
+            _ => unimplemented!()
+        }
+    };
+
+    return result[0]
 }
 
 fn main() {
