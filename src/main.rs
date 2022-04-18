@@ -11,6 +11,8 @@ enum TokenTypes {
     Null // Used as initial `last_token_value` in lexer
 }
 
+// Token types that should not group when they occur consecutively
+// For example `((` should be interpreted as two seperate brackets
 const NON_GROUPING_TYPES: &'static [TokenTypes] = &[
     TokenTypes::LBrace,
     TokenTypes::RBrace,
@@ -29,6 +31,7 @@ fn lex(source: &str) -> Vec<Token> {
     let mut last_token_type = TokenTypes::Null;
     
     for c in source.chars() {
+        // Interpret character as correct type
         let t_type = match c {
             ' ' | '\n' | '\t' | '\r' => TokenTypes::Whitespace,
             '(' => TokenTypes::LBrace,
@@ -39,14 +42,15 @@ fn lex(source: &str) -> Vec<Token> {
         };
 
         if t_type == last_token_type {
+            // If token is non-grouping, then add it as a seperate token
             if let Some(_) = NON_GROUPING_TYPES.iter().position(|&t| t == last_token_type) {
                 let token = Token{t_type: last_token_type, t_value: last_word};
                 last_token_type = t_type;
 
                 tokens.push(token);
-                last_word = String::from(c);
+                last_word = String::new();
             }
-
+        
             last_word.push(c);
         } else {
             let token = Token{t_type: last_token_type, t_value: last_word};
@@ -63,6 +67,9 @@ fn lex(source: &str) -> Vec<Token> {
 }
 
 fn shunt(tokens: Vec<Token>) -> Vec<Token> {
+    // https://en.wikipedia.org/wiki/Shunting_yard_algorithm
+
+    // Operator precedences for calculating order of operations
     let OP_PRECEDENCES: HashMap<String, u8> = HashMap::from([
         ("/".to_owned(), 2), ("*".to_owned(), 2),
         ("+".to_owned(), 1), ("-".to_owned(), 1),
@@ -80,6 +87,7 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
                 while !op_stack.is_empty() {
                     let operator = op_stack.pop().unwrap();
                     
+                    // Left brace means that further operators are in a different scope
                     if operator.t_type == TokenTypes::LBrace {
                         op_stack.push(operator);
                         break;
@@ -95,15 +103,16 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
             TokenTypes::RBrace => {
                 loop {
                     if op_stack.is_empty() {
+                        // There should've been a matching left paranthesis
                         panic!("Mismatched Parentheses");
                     }
 
-                    let top_op = op_stack.pop().unwrap();
+                    let top_operator = op_stack.pop().unwrap();
 
-                    if top_op.t_type == TokenTypes::LBrace {
+                    if top_operator.t_type == TokenTypes::LBrace {
                         break;
                     } else {
-                        result.push(top_op);
+                        result.push(top_operator);
                     }
                 }
             },
@@ -112,6 +121,7 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
         };
     };
 
+    // If there are any operators left in stack, move them to result
     while !op_stack.is_empty() {
         result.push(op_stack.pop().unwrap());
     }
