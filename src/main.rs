@@ -102,10 +102,23 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
 
     let mut op_stack: Vec<Token> = Vec::new();
     let mut result: Vec<Token> = Vec::new();
-
+    let mut last_token_type = TokenTypes::Null;
+        
     for token in tokens {
+        let token_type = token.t_type;
+
         match token.t_type {
-            TokenTypes::Number => result.push(token),
+            TokenTypes::Number => {
+                // Multiply if numbers occur consecutively
+                if last_token_type == TokenTypes::Number {
+                    op_stack.push(Token {
+                        t_type: TokenTypes::Operator,
+                        t_value: "*".to_owned(),
+                        ..token
+                    });
+                }
+                result.push(token);
+            },
             TokenTypes::LBrace => op_stack.push(token),
             TokenTypes::Operator => {
                 let current_precedence = OP_PRECEDENCES[&token.t_value];                
@@ -143,6 +156,8 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
             },
             _ => panic!("Unhandled token type: {:?}", token.t_type)
         };
+
+        last_token_type = token_type;
     };
 
     // If there are any operators left in stack, move them to result
