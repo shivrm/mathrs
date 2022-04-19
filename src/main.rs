@@ -82,7 +82,7 @@ fn lex(source: &str) -> Vec<Token> {
             last_token_type = t_type;
             last_token_start = i;
 
-            if token.t_type != TokenTypes::Null {
+            if token.t_type != TokenTypes::Null && token.t_type != TokenTypes::Whitespace {
                 tokens.push(token);
             }
             last_word = String::from(c);
@@ -141,7 +141,6 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
                     }
                 }
             },
-            TokenTypes::Whitespace => {},
             _ => panic!("Unhandled token type: {:?}", token.t_type)
         };
     };
