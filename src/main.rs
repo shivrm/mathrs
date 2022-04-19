@@ -95,7 +95,7 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
     // https://en.wikipedia.org/wiki/Shunting_yard_algorithm
 
     // Operator precedences for calculating order of operations
-    let OP_PRECEDENCES: HashMap<String, u8> = HashMap::from([
+    let precedences: HashMap<String, u8> = HashMap::from([
         ("/".to_owned(), 2), ("*".to_owned(), 2),
         ("+".to_owned(), 1), ("-".to_owned(), 1),
     ]);
@@ -121,7 +121,7 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
             },
             TokenTypes::LBrace => op_stack.push(token),
             TokenTypes::Operator => {
-                let current_precedence = OP_PRECEDENCES[&token.t_value];                
+                let current_precedence = precedences[&token.t_value];                
                 while !op_stack.is_empty() {
                     let operator = op_stack.pop().unwrap();
                     
@@ -131,7 +131,7 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
                         break;
                     }
                     
-                    let top_precedence = OP_PRECEDENCES[&operator.t_value];
+                    let top_precedence = precedences[&operator.t_value];
                     if top_precedence >= current_precedence {
                         result.push(operator);
                     }
