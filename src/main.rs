@@ -29,6 +29,11 @@ struct Token {
     col_end: usize,
 }
 
+fn error(token: &Token, message: &str) {
+    eprintln!("On line {}, columns {}-{}", token.row, token.col_start, token.col_end);
+    eprintln!("{}", message);
+}
+
 fn lex(source: &str) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut last_word = String::new();
@@ -49,7 +54,10 @@ fn lex(source: &str) -> Vec<Token> {
             ')' => TokenTypes::RBrace,
             '0'..='9' => TokenTypes::Number,
             '+' | '*' | '-' | '/' => TokenTypes::Operator,
-            _ => panic!("Invalid token")
+            _ => {
+                eprintln!("On line {}, column {}", row, last_token_start);
+                panic!("Token could not be parsed - {}", c);
+            }
         };
 
         if t_type == last_token_type {
@@ -154,7 +162,9 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
                     }
                 }
             },
-            _ => panic!("Unhandled token type: {:?}", token.t_type)
+            _ => {
+                error(&token, &format!("Token {} could not be handled", token.t_value));
+            }
         };
 
         last_token_type = token_type;
@@ -192,7 +202,7 @@ fn eval(tokens: &Vec<Token>) -> f64 {
                 };
                 result.push(value);
             }
-            _ => unimplemented!()
+            _ => error(&token, &format!("Token {} could not be evaluated", token.t_value))
         }
     };
 
