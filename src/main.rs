@@ -2,10 +2,10 @@ use std::io;
 use std::collections::HashMap;
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
-enum TokenTypes {
+enum TokenGroups {
     Whitespace,
-    LBrace,
-    RBrace,
+    LParen,
+    RParen,
     Number,
     Operator,
     Null // Used as initial `last_token_value` in lexer
@@ -13,16 +13,16 @@ enum TokenTypes {
 
 // Token types that should not group when they occur consecutively
 // For example `((` should be interpreted as two seperate brackets
-const NON_GROUPING_TYPES: &'static [TokenTypes] = &[
-    TokenTypes::LBrace,
-    TokenTypes::RBrace,
-    TokenTypes::Operator
+const NON_GROUPING_TYPES: &'static [TokenGroups] = &[
+    TokenGroups::LParen,
+    TokenGroups::RParen,
+    TokenGroups::Operator
 ];
 
 #[derive(Debug)]
 struct Token {
-    t_type: TokenTypes,
-    t_value: String,
+    group: TokenGroups,
+    value: String,
     
     row: usize,
     col_start: usize,
@@ -37,40 +37,40 @@ fn error(token: &Token, message: &str) {
 fn lex(source: &str) -> Vec<Token> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut last_word = String::new();
-    let mut last_token_type = TokenTypes::Null;
+    let mut last_token_type = TokenGroups::Null;
     let mut last_token_start: usize = 0;
     let mut row = 1;
 
     for (i, c) in source.chars().enumerate() {
         // Interpret character as correct type
-        let t_type = match c {
+        let group = match c {
             ' ' | '\n' | '\t' | '\r' => {
                 if c == '\n' {
                     row += 1;
                 }
-                TokenTypes::Whitespace
+                TokenGroups::Whitespace
             },
-            '(' => TokenTypes::LBrace,
-            ')' => TokenTypes::RBrace,
-            '0'..='9' => TokenTypes::Number,
-            '+' | '*' | '-' | '/' => TokenTypes::Operator,
+            '(' => TokenGroups::LParen,
+            ')' => TokenGroups::RParen,
+            '0'..='9' => TokenGroups::Number,
+            '+' | '*' | '-' | '/' => TokenGroups::Operator,
             _ => {
                 eprintln!("On line {}, column {}", row, last_token_start);
                 panic!("Token could not be parsed - {}", c);
             }
         };
 
-        if t_type == last_token_type {
+        if group == last_token_type {
             // If token is non-grouping, then add it as a seperate token
             if let Some(_) = NON_GROUPING_TYPES.iter().position(|&t| t == last_token_type) {
                 let token = Token{
-                    t_type: last_token_type,
-                    t_value: last_word,
+                    group: last_token_type,
+                    value: last_word,
                     row: row,
                     col_start: last_token_start,
                     col_end: i
                 };
-                last_token_type = t_type;
+                last_token_type = group;
                 last_token_start = i;
 
                 tokens.push(token);
@@ -80,17 +80,17 @@ fn lex(source: &str) -> Vec<Token> {
             last_word.push(c);
         } else {
             let token = Token{
-                t_type: last_token_type,
-                t_value: last_word,
+                group: last_token_type,
+                value: last_word,
                 row: row,
                 col_start: last_token_start,
                 col_end: i
             };
 
-            last_token_type = t_type;
+            last_token_type = group;
             last_token_start = i;
 
-            if token.t_type != TokenTypes::Null && token.t_type != TokenTypes::Whitespace {
+            if token.group != TokenGroups::Null && token.group != TokenGroups::Whitespace {
                 tokens.push(token);
             }
             last_word = String::from(c);
@@ -110,43 +110,43 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
 
     let mut op_stack: Vec<Token> = Vec::new();
     let mut result: Vec<Token> = Vec::new();
-    let mut last_token_type = TokenTypes::Null;
+    let mut last_token_type = TokenGroups::Null;
         
     for token in tokens {
-        let token_type = token.t_type;
+        let token_type = token.group;
 
-        match token.t_type {
-            TokenTypes::Number => {
+        match token.group {
+            TokenGroups::Number => {
                 // Multiply if numbers occur consecutively
-                if last_token_type == TokenTypes::Number {
+                if last_token_type == TokenGroups::Number {
                     op_stack.push(Token {
-                        t_type: TokenTypes::Operator,
-                        t_value: "*".to_owned(),
+                        group: TokenGroups::Operator,
+                        value: "*".to_owned(),
                         ..token
                     });
                 }
                 result.push(token);
             },
-            TokenTypes::LBrace => op_stack.push(token),
-            TokenTypes::Operator => {
-                let current_precedence = precedences[&token.t_value];                
+            TokenGroups::LParen => op_stack.push(token),
+            TokenGroups::Operator => {
+                let current_precedence = precedences[&token.value];                
                 while !op_stack.is_empty() {
                     let operator = op_stack.pop().unwrap();
                     
                     // Left brace means that further operators are in a different scope
-                    if operator.t_type == TokenTypes::LBrace {
+                    if operator.group == TokenGroups::LParen {
                         op_stack.push(operator);
                         break;
                     }
                     
-                    let top_precedence = precedences[&operator.t_value];
+                    let top_precedence = precedences[&operator.value];
                     if top_precedence >= current_precedence {
                         result.push(operator);
                     }
                 };
                 op_stack.push(token);
             },
-            TokenTypes::RBrace => {
+            TokenGroups::RParen => {
                 loop {
                     if op_stack.is_empty() {
                         // There should've been a matching left paranthesis
@@ -155,7 +155,7 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
 
                     let top_operator = op_stack.pop().unwrap();
 
-                    if top_operator.t_type == TokenTypes::LBrace {
+                    if top_operator.group == TokenGroups::LParen {
                         break;
                     } else {
                         result.push(top_operator);
@@ -163,7 +163,7 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
                 }
             },
             _ => {
-                error(&token, &format!("Token {} could not be handled", token.t_value));
+                error(&token, &format!("Token {} could not be handled", token.value));
             }
         };
 
@@ -182,18 +182,18 @@ fn eval(tokens: &Vec<Token>) -> f64 {
     let mut result: Vec<f64> = Vec::new();
 
     for token in tokens {
-        match token.t_type {
-            TokenTypes::Number => {
-                let as_float: f64 = token.t_value.parse().unwrap();
+        match token.group {
+            TokenGroups::Number => {
+                let as_float: f64 = token.value.parse().unwrap();
                 result.push(as_float);
             }
-            TokenTypes::Operator => {
+            TokenGroups::Operator => {
                 // Shunting-yard algorithm, being stack based, puts the
                 // later operand on top. So right comes on top of left
                 let right = result.pop().unwrap();
                 let left = result.pop().unwrap();
 
-                let value = match &token.t_value[..] {
+                let value = match &token.value[..] {
                     "+" => left + right,
                     "-" => left - right,
                     "*" => left * right,
@@ -202,7 +202,7 @@ fn eval(tokens: &Vec<Token>) -> f64 {
                 };
                 result.push(value);
             }
-            _ => error(&token, &format!("Token {} could not be evaluated", token.t_value))
+            _ => error(&token, &format!("Token {} could not be evaluated", token.value))
         }
     };
 
