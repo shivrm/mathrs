@@ -29,6 +29,12 @@ struct Token {
     col_end: usize,
 }
 
+struct MathError {
+    title: String,
+    description: String,
+    token: Token
+}
+
 fn error(token: &Token, message: &str) {
     eprintln!("On line {}, columns {}-{}", token.row, token.col_start, token.col_end);
     eprintln!("{}", message);
