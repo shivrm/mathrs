@@ -233,6 +233,20 @@ fn eval(tokens: Vec<Token>) -> Result<f64, MathError> {
                 };
                 result.push(value);
             }
+            TokenGroups::UnaryOp => {
+                let operand = result.pop().unwrap();
+
+                let value = match &token.value[..] {
+                    "+" => operand,
+                    "-" => -operand,
+                    _ => return Err(MathError {
+                        title: "Unknown Operator".to_owned(),
+                        description: "No handler exists for unary operator".to_owned(),
+                        token
+                    })
+                };
+                result.push(value);
+            }
             _ => return Err(MathError {
                 title: "Unevaluatable Token".to_owned(),
                 description: "No handler exists for the token type".to_owned(),
