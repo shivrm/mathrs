@@ -62,8 +62,8 @@ fn lex(source: &str) -> Result<Vec<Token>, MathError> {
             '(' => TokenGroups::LParen,
             ')' => TokenGroups::RParen,
             '0'..='9' => TokenGroups::Number,
-            '+' | '*' | '-' | '/' => TokenGroups::Operator,
-            
+            '+' | '*' | '-' | '/' | '^' => TokenGroups::Operator,
+
             _ => return Err(MathError {
                 title: "Could not lex token".to_owned(),
                 description: "The lexer could not lex the token".to_owned(),
@@ -121,6 +121,7 @@ fn parse(tokens: Vec<Token>) -> Result<Vec<Token>, MathError> {
 
     // Operator precedences for calculating order of operations
     let precedences: HashMap<String, u8> = HashMap::from([
+        ("^".to_owned(), 3),
         ("/".to_owned(), 2), ("*".to_owned(), 2),
         ("+".to_owned(), 1), ("-".to_owned(), 1),
     ]);
@@ -165,7 +166,8 @@ fn parse(tokens: Vec<Token>) -> Result<Vec<Token>, MathError> {
                     }
                     
                     let top_precedence = precedences[&operator.value];
-                    if top_precedence >= current_precedence {
+                    if top_precedence > current_precedence || 
+                      (top_precedence == current_precedence && &token.value != "^") {
                         result.push(operator);
                     }
                 };
@@ -225,6 +227,7 @@ fn eval(tokens: Vec<Token>) -> Result<f64, MathError> {
                     "-" => left - right,
                     "*" => left * right,
                     "/" => left / right,
+                    "^" => left.powf(right),
                     _ => return Err(MathError {
                         title: "Unknown Operator".to_owned(),
                         description: "No handler exists for the operator".to_owned(),
