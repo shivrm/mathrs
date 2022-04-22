@@ -11,9 +11,9 @@ enum TokenGroups {
     Null // Used as initial `last_token_value` in lexer
 }
 
-// Token types that should not group when they occur consecutively
+// Token groups that should not group when they occur consecutively
 // For example `((` should be interpreted as two seperate brackets
-const NON_GROUPING_TYPES: &'static [TokenGroups] = &[
+const NON_GROUPING_TOKENS: &'static [TokenGroups] = &[
     TokenGroups::LParen,
     TokenGroups::RParen,
     TokenGroups::Operator
@@ -51,7 +51,7 @@ fn lex(source: &str) -> Result<Vec<Token>, MathError> {
     let mut line = 1;
 
     for (i, c) in source.chars().enumerate() {
-        // Interpret character as correct type
+        // Interpret character as correct group
         let group = match c {
             '\n' => {
                 line += 1;
@@ -78,7 +78,7 @@ fn lex(source: &str) -> Result<Vec<Token>, MathError> {
 
         if group == last_token_group {
             // If token is non-grouping, then add it as a seperate token
-            if let Some(_) = NON_GROUPING_TYPES.iter().position(|&t| t == last_token_group) {
+            if let Some(_) = NON_GROUPING_TOKENS.iter().position(|&t| t == last_token_group) {
                 let token = Token{
                     group: last_token_group,
                     value: last_word,
@@ -115,7 +115,7 @@ fn lex(source: &str) -> Result<Vec<Token>, MathError> {
     Ok(tokens)
 }
 
-fn shunt(tokens: Vec<Token>) -> Vec<Token> {
+fn parse(tokens: Vec<Token>) -> Result<Vec<Token>, MathError> {
     // https://en.wikipedia.org/wiki/Shunting_yard_algorithm
 
     // Operator precedences for calculating order of operations
@@ -126,15 +126,15 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
 
     let mut op_stack: Vec<Token> = Vec::new();
     let mut result: Vec<Token> = Vec::new();
-    let mut last_token_type = TokenGroups::Null;
+    let mut last_token_group = TokenGroups::Null;
         
     for token in tokens {
-        let token_type = token.group;
+        let token_group = token.group;
 
         match token.group {
             TokenGroups::Number => {
                 // Multiply if numbers occur consecutively
-                if last_token_type == TokenGroups::Number {
+                if last_token_group == TokenGroups::Number {
                     op_stack.push(Token {
                         group: TokenGroups::Operator,
                         value: "*".to_owned(),
@@ -178,12 +178,14 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
                     }
                 }
             },
-            _ => {
-                error(&token, &format!("Token {} could not be handled", token.value));
-            }
+            _ => return Err(MathError {
+                title: "Unparsable Token".to_owned(),
+                description: "Token could not be parsed".to_owned(),
+                token
+            })
         };
 
-        last_token_type = token_type;
+        last_token_group = token_group;
     };
 
     // If there are any operators left in stack, move them to result
@@ -191,7 +193,7 @@ fn shunt(tokens: Vec<Token>) -> Vec<Token> {
         result.push(op_stack.pop().unwrap());
     }
 
-    return result
+    Ok(result)
 }
 
 fn eval(tokens: &Vec<Token>) -> f64 {
@@ -240,7 +242,7 @@ fn main() {
     }
 
     let tokens = lex(&input).unwrap();
-    let shunted = shunt(tokens);
+    let shunted = parse(tokens).unwrap();
     let value = eval(&shunted);
 
     println!("Value of expression: {}", value);
