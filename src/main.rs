@@ -196,7 +196,7 @@ fn parse(tokens: Vec<Token>) -> Result<Vec<Token>, MathError> {
     Ok(result)
 }
 
-fn eval(tokens: &Vec<Token>) -> f64 {
+fn eval(tokens: Vec<Token>) -> Result<f64, MathError> {
     let mut result: Vec<f64> = Vec::new();
 
     for token in tokens {
@@ -216,15 +216,23 @@ fn eval(tokens: &Vec<Token>) -> f64 {
                     "-" => left - right,
                     "*" => left * right,
                     "/" => left / right,
-                    _ => panic!("Unhandled operator")
+                    _ => return Err(MathError {
+                        title: "Unknown Operator".to_owned(),
+                        description: "No handler exists for the operator".to_owned(),
+                        token
+                    })
                 };
                 result.push(value);
             }
-            _ => error(&token, &format!("Token {} could not be evaluated", token.value))
+            _ => return Err(MathError {
+                title: "Unevaluatable Token".to_owned(),
+                description: "No handler exists for the token type".to_owned(),
+                token
+            })
         }
     };
 
-    return result[0]
+    return Ok(result[0])
 }
 
 fn main() {
@@ -243,7 +251,7 @@ fn main() {
 
     let tokens = lex(&input).unwrap();
     let shunted = parse(tokens).unwrap();
-    let value = eval(&shunted);
+    let value = eval(shunted).unwrap();
 
     println!("Value of expression: {}", value);
 }
