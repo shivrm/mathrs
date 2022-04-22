@@ -272,12 +272,23 @@ fn eval(tokens: Vec<Token>) -> Result<f64, MathError> {
                 let value = match &token.value[..] {
                     "pi" => 3.141592653589793,
                     "e" => 2.718281828459045,
-                    _ => unimplemented!()
+                    _ => return Err(MathError {
+                        title: "Unknown Identifier".to_owned(),
+                        description: "This identifier does not exist".to_owned(),
+                        token
+                    })
                 };
                 result.push(value);
             }
             TokenGroups::Function => {
-                unimplemented!();
+                let value = match &token.value[..] {
+                    _ => return Err(MathError {
+                        title: "Unknown Identifier".to_owned(),
+                        description: "This identifier does not exist".to_owned(),
+                        token
+                    })
+                };
+                result.push(value);
             }
             _ => return Err(MathError {
                 title: "Unevaluatable Token".to_owned(),
