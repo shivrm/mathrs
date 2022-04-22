@@ -8,6 +8,7 @@ enum TokenGroups {
     RParen,
     Number,
     Operator,
+    UnaryOp,
     Null // Used as initial `last_token_value` in lexer
 }
 
@@ -145,6 +146,14 @@ fn parse(tokens: Vec<Token>) -> Result<Vec<Token>, MathError> {
             },
             TokenGroups::LParen => op_stack.push(token),
             TokenGroups::Operator => {
+                if last_token_group == TokenGroups::Operator || last_token_group == TokenGroups::Null {
+                    op_stack.push(Token {
+                        group: TokenGroups::UnaryOp,
+                        ..token
+                    });
+                    continue;
+                }
+
                 let current_precedence = precedences[&token.value];                
                 while !op_stack.is_empty() {
                     let operator = op_stack.pop().unwrap();
