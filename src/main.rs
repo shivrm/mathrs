@@ -1,4 +1,4 @@
-use std::io;
+use std::{io, fmt};
 use std::collections::HashMap;
 
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
@@ -29,16 +29,16 @@ struct Token {
     col_end: usize,
 }
 
-#[derive(Debug)]
 struct MathError {
     title: String,
     description: String,
     token: Token
 }
 
-fn error(token: &Token, message: &str) {
-    eprintln!("On line {}, columns {}-{}", token.line, token.col_start, token.col_end);
-    eprintln!("{}", message);
+impl fmt::Debug for MathError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "\n{} at line {}, cols {}-{}\n{}", self.title, self.token.line, self.token.col_start, self.token.col_end, self.description)
+    }
 }
 
 fn lex(source: &str) -> Result<Vec<Token>, MathError> {
