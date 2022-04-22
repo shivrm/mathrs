@@ -24,11 +24,12 @@ struct Token {
     group: TokenGroups,
     value: String,
     
-    row: usize,
+    line: usize,
     col_start: usize,
     col_end: usize,
 }
 
+#[derive(Debug)]
 struct MathError {
     title: String,
     description: String,
@@ -36,64 +37,73 @@ struct MathError {
 }
 
 fn error(token: &Token, message: &str) {
-    eprintln!("On line {}, columns {}-{}", token.row, token.col_start, token.col_end);
+    eprintln!("On line {}, columns {}-{}", token.line, token.col_start, token.col_end);
     eprintln!("{}", message);
 }
 
-fn lex(source: &str) -> Vec<Token> {
+fn lex(source: &str) -> Result<Vec<Token>, MathError> {
     let mut tokens: Vec<Token> = Vec::new();
     let mut last_word = String::new();
-    let mut last_token_type = TokenGroups::Null;
+
+    let mut last_token_group = TokenGroups::Null;
     let mut last_token_start: usize = 0;
-    let mut row = 1;
+
+    let mut line = 1;
 
     for (i, c) in source.chars().enumerate() {
         // Interpret character as correct type
         let group = match c {
-            ' ' | '\n' | '\t' | '\r' => {
-                if c == '\n' {
-                    row += 1;
-                }
+            '\n' => {
+                line += 1;
                 TokenGroups::Whitespace
-            },
+            }
+            ' ' | '\t' | '\r' => TokenGroups::Whitespace,
             '(' => TokenGroups::LParen,
             ')' => TokenGroups::RParen,
             '0'..='9' => TokenGroups::Number,
             '+' | '*' | '-' | '/' => TokenGroups::Operator,
-            _ => {
-                eprintln!("On line {}, column {}", row, last_token_start);
-                panic!("Token could not be parsed - {}", c);
-            }
+            
+            _ => return Err(MathError {
+                title: "Could not lex token".to_owned(),
+                description: "The lexer could not lex the token".to_owned(),
+                token: Token {
+                    group: TokenGroups::Null,
+                    value: String::new(),
+                    line,
+                    col_start: last_token_start,
+                    col_end: i
+                }
+            })
         };
 
-        if group == last_token_type {
+        if group == last_token_group {
             // If token is non-grouping, then add it as a seperate token
-            if let Some(_) = NON_GROUPING_TYPES.iter().position(|&t| t == last_token_type) {
+            if let Some(_) = NON_GROUPING_TYPES.iter().position(|&t| t == last_token_group) {
                 let token = Token{
-                    group: last_token_type,
+                    group: last_token_group,
                     value: last_word,
-                    row: row,
+                    line,
                     col_start: last_token_start,
                     col_end: i
                 };
-                last_token_type = group;
+                last_token_group = group;
                 last_token_start = i;
 
                 tokens.push(token);
                 last_word = String::new();
             }
-        
             last_word.push(c);
+        
         } else {
             let token = Token{
-                group: last_token_type,
+                group: last_token_group,
                 value: last_word,
-                row: row,
+                line,
                 col_start: last_token_start,
                 col_end: i
             };
 
-            last_token_type = group;
+            last_token_group = group;
             last_token_start = i;
 
             if token.group != TokenGroups::Null && token.group != TokenGroups::Whitespace {
@@ -102,7 +112,7 @@ fn lex(source: &str) -> Vec<Token> {
             last_word = String::from(c);
         }
     };
-    return tokens
+    Ok(tokens)
 }
 
 fn shunt(tokens: Vec<Token>) -> Vec<Token> {
@@ -229,7 +239,7 @@ fn main() {
         line.clear();
     }
 
-    let tokens = lex(&input);
+    let tokens = lex(&input).unwrap();
     let shunted = shunt(tokens);
     let value = eval(&shunted);
 
