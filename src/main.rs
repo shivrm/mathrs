@@ -9,6 +9,8 @@ enum TokenGroups {
     Number,
     Operator,
     UnaryOp,
+    Function,
+    Identifier,
     Null // Used as initial `last_token_value` in lexer
 }
 
@@ -17,7 +19,7 @@ enum TokenGroups {
 const NON_GROUPING_TOKENS: &'static [TokenGroups] = &[
     TokenGroups::LParen,
     TokenGroups::RParen,
-    TokenGroups::Operator
+    TokenGroups::Operator,
 ];
 
 #[derive(Debug)]
@@ -63,6 +65,7 @@ fn lex(source: &str) -> Result<Vec<Token>, MathError> {
             ')' => TokenGroups::RParen,
             '0'..='9' => TokenGroups::Number,
             '+' | '*' | '-' | '/' | '^' => TokenGroups::Operator,
+            'A'..='Z' | 'a'..='z' => TokenGroups::Identifier,
 
             _ => return Err(MathError {
                 title: "Could not lex token".to_owned(),
@@ -164,7 +167,7 @@ fn parse(tokens: Vec<Token>) -> Result<Vec<Token>, MathError> {
                         op_stack.push(operator);
                         break;
                     }
-                    
+
                     let top_precedence = precedences[&operator.value];
                     if top_precedence > current_precedence || 
                       (top_precedence == current_precedence && &token.value != "^") {
@@ -189,6 +192,16 @@ fn parse(tokens: Vec<Token>) -> Result<Vec<Token>, MathError> {
                     }
                 }
             },
+            TokenGroups::Identifier => {
+                if last_token_group == TokenGroups::RParen {
+                    op_stack.push(Token {
+                        group: TokenGroups::Function,
+                        ..token
+                    });
+                } else {
+                    result.push(token);
+                }
+            }
             _ => return Err(MathError {
                 title: "Unparsable Token".to_owned(),
                 description: "Token could not be parsed".to_owned(),
@@ -249,6 +262,17 @@ fn eval(tokens: Vec<Token>) -> Result<f64, MathError> {
                     })
                 };
                 result.push(value);
+            }
+            TokenGroups::Identifier => {
+                let value = match &token.value[..] {
+                    "pi" => 3.141592653589793,
+                    "e" => 2.718281828459045,
+                    _ => unimplemented!()
+                };
+                result.push(value);
+            }
+            TokenGroups::Function => {
+                unimplemented!();
             }
             _ => return Err(MathError {
                 title: "Unevaluatable Token".to_owned(),
