@@ -186,21 +186,26 @@ fn parse(tokens: Vec<Token>) -> Result<Vec<Token>, MathError> {
                     let top_operator = op_stack.pop().unwrap();
 
                     if top_operator.group == TokenGroups::LParen {
+
+                        let top_operator = op_stack.pop().unwrap();
+                        
+                        if top_operator.group == TokenGroups::Identifier {
+                            op_stack.push(Token {
+                                group: TokenGroups::Function,
+                                ..top_operator
+                            });
+                        } else {
+                            op_stack.push(top_operator)
+                        }
                         break;
+                    
                     } else {
                         result.push(top_operator);
                     }
                 }
             },
             TokenGroups::Identifier => {
-                if last_token_group == TokenGroups::RParen {
-                    op_stack.push(Token {
-                        group: TokenGroups::Function,
-                        ..token
-                    });
-                } else {
-                    result.push(token);
-                }
+                op_stack.push(token);
             }
             _ => return Err(MathError {
                 title: "Unparsable Token".to_owned(),
