@@ -8,15 +8,16 @@ pub enum Ops {
     Div
 }
 
-pub enum Tokens<'a> {
+pub enum Tokens {
     Number(i32),
-    Identifier(&'a str),
+    Identifier(String),
 
     OpenParen,
     CloseParen,
 
     UnaryOp(Ops),
-    BinaryOp(Ops)
+    BinaryOp(Ops),
+    EOF
 }
 
 pub struct Lexer<'a> {
@@ -49,7 +50,35 @@ impl<'a> Lexer<'a> {
         self.iter.peek()
     }
 
-    pub fn next_token(&mut self) -> Tokens<'a> {
+    pub fn read_number(&mut self) -> i32 {
+        let mut num_string = String::new();
+        
+        while let op @ Some('0'..='9') = self.current_char() {
+            match op {
+                Some(&c) => num_string.push(c),
+                None => break
+            };
+            self.advance();
+        }
+
+        return num_string.parse().unwrap();
+    }
+
+    fn read_identifier(&mut self) -> String {
+        let mut ident_string = String::new();
+        
+        while let op @ Some('A'..='Z' | 'a'..='z') = self.current_char() {
+            match op {
+                Some(&c) => ident_string.push(c),
+                None => break
+            };
+            self.advance();
+        }
+
+        return ident_string;
+    }
+
+    pub fn next_token(&mut self) -> Tokens {
         if let Some(c) = self.current_char() {
             match c {
                 '0'..='9' => {
@@ -71,6 +100,8 @@ impl<'a> Lexer<'a> {
             
                 _ => panic!("Unhandled char")
             }
+        } else {
+            Tokens::EOF
         }
     }
 }
