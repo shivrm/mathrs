@@ -1,6 +1,8 @@
 use std::{io, fmt};
 use std::collections::HashMap;
 
+mod mathrs;
+
 #[derive(Eq, PartialEq, Debug, Clone, Copy)]
 enum TokenGroups {
     Whitespace,

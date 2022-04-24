@@ -1,4 +1,5 @@
 use std::iter::Peekable;
+use std::str::Chars;
 
 pub enum Ops {
     Add,
@@ -21,7 +22,7 @@ pub enum Tokens<'a> {
 pub struct Lexer<'a> {
     pos: u32,
     text: &'a str,
-    iter: Peekable<str::Chars<'a>>
+    iter: Peekable<Chars<'a>>
 }
 
 impl<'a> Lexer<'a> {
@@ -43,14 +44,14 @@ impl<'a> Lexer<'a> {
         return next_char;
     }
 
-    [#inline]
-    fn current_char(&mut self) -> char {
+    #[inline]
+    fn current_char(&mut self) -> Option<&char> {
         self.iter.peek()
     }
 
     pub fn next_token(&mut self) -> Tokens<'a> {
         if let Some(c) = self.current_char() {
-            match c => {
+            match c {
                 '0'..='9' => {
                     let number = self.read_number();
                     Tokens::Number(number) 
@@ -60,13 +61,13 @@ impl<'a> Lexer<'a> {
                     Tokens::Identifier(identifier)
                 }
 
-                '(' => Tokens::OpenParen
-                ')' => Tokens::CloseParen
+                '(' => Tokens::OpenParen,
+                ')' => Tokens::CloseParen,
 
-                '+' => Tokens::BinaryOp(Ops::Add)
-                '-' => Tokens::BinaryOp(Ops::Sub)
-                '*' => Tokens::BinaryOp(Ops::Mul)
-                '/' => Tokens::BinaryOp(Ops::Div)
+                '+' => Tokens::BinaryOp(Ops::Add),
+                '-' => Tokens::BinaryOp(Ops::Sub),
+                '*' => Tokens::BinaryOp(Ops::Mul),
+                '/' => Tokens::BinaryOp(Ops::Div),
             
                 _ => panic!("Unhandled char")
             }
