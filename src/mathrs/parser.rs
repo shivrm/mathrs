@@ -37,4 +37,27 @@ impl<'a> Parser<'a> {
         }
         self.current_token = self.lexer.next_token().unwrap();
     }
+
+    fn parse_operand(&mut self) -> Option<AstNode> {
+        match self.current_token {
+
+            Token::Number(n) => {
+                self.expect(Token::Number(n));
+                Some(AstNode::Number(n))
+            }
+
+            Token::OpenParen => {
+                self.expect(Token::OpenParen);
+                let node = self.parse_expr();
+                self.expect(Token::CloseParen);
+
+                node
+            }
+            _ => panic!("Unexpected token")
+        }
+    }
+
+    fn parse_expr(&mut self) -> Option<AstNode> {
+        todo!();
+    }
 }
