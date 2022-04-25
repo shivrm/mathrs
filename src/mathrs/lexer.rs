@@ -1,7 +1,7 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Ops {
     Add,
     Sub,
@@ -17,8 +17,8 @@ pub enum Token {
     OpenParen,
     CloseParen,
 
-    UnaryOp(Ops),
-    BinaryOp(Ops)
+    Operator(Ops),
+    EOF
 }
 
 pub struct Lexer<'a> {
@@ -85,7 +85,7 @@ impl<'a> Lexer<'a> {
         return ident_string;
     }
 
-    pub fn next_token(&mut self) -> Option<Token> {
+    pub fn next_token(&mut self) -> Token {
         if let Some(c) = self.current_char() {
             let token = match c {
                 ' ' | '\n' | '\r' | '\t' => {
@@ -112,25 +112,25 @@ impl<'a> Lexer<'a> {
                 }
                 '+' => {
                     self.advance();
-                    Token::BinaryOp(Ops::Add)
+                    Token::Operator(Ops::Add)
                 }
                 '-' => {
                     self.advance();
-                    Token::BinaryOp(Ops::Sub)
+                    Token::Operator(Ops::Sub)
                 }
                 '*' => {
                     self.advance();
-                    Token::BinaryOp(Ops::Mul)
+                    Token::Operator(Ops::Mul)
                 }
                 '/' => {
                     self.advance();
-                    Token::BinaryOp(Ops::Div)
+                    Token::Operator(Ops::Div)
                 },
             
                 _ => panic!("Unhandled char")
             };
-            return Some(token);
+            return token;
         }
-        return None;
+        return Token::EOF;
     }
 }

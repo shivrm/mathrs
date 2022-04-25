@@ -17,7 +17,7 @@ enum AstNode {
     Number(i32)
 }
 
-struct Parser<'a> {
+pub struct Parser<'a> {
     lexer: Lexer<'a>,
     current_token: Token
 }
@@ -26,7 +26,7 @@ impl<'a> Parser<'a> {
     pub fn new(text: &'a str) -> Self {
         let mut lexer = Lexer::new(text);
         Parser {
-            current_token: lexer.next_token().unwrap(),
+            current_token: lexer.next_token(),
             lexer
         }
     }
@@ -35,7 +35,7 @@ impl<'a> Parser<'a> {
         if !variant_eq(&self.current_token, &token_type) {
             panic!("Expected {token_type:?}");
         }
-        self.current_token = self.lexer.next_token().unwrap();
+        self.current_token = self.lexer.next_token();
     }
 
     fn parse_operand(&mut self) -> Option<AstNode> {
@@ -57,7 +57,23 @@ impl<'a> Parser<'a> {
         }
     }
 
-    fn parse_expr(&mut self) -> Option<AstNode> {
-        todo!();
+    pub fn parse_expr(&mut self) -> Option<AstNode> {
+        let left = self.parse_operand()?;
+        
+        match self.current_token {
+            Token::Operator(op) => {
+                self.expect(Token::Operator(Ops::Add));
+                let right = self.parse_operand()?;
+
+                Some(AstNode::BinOp {
+                    left: Box::new(left),
+                    op,
+                    right: Box::new(right)
+                })
+            }
+
+            Token::EOF => return Some(left),
+            _ => panic!("Unexpected Token")
+        }
     }
 }
