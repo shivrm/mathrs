@@ -10,7 +10,7 @@ pub enum Ops {
 }
 
 #[derive(Debug)]
-pub enum Tokens {
+pub enum Token {
     Number(i32),
     Identifier(String),
 
@@ -85,7 +85,7 @@ impl<'a> Lexer<'a> {
         return ident_string;
     }
 
-    pub fn next_token(&mut self) -> Option<Tokens> {
+    pub fn next_token(&mut self) -> Option<Token> {
         if let Some(c) = self.current_char() {
             let token = match c {
                 ' ' | '\n' | '\r' | '\t' => {
@@ -95,36 +95,36 @@ impl<'a> Lexer<'a> {
 
                 '0'..='9' => {
                     let number = self.read_number();
-                    Tokens::Number(number) 
+                    Token::Number(number) 
                 }
                 'A'..='Z' | 'a'..='z' => {
                     let identifier = self.read_identifier();
-                    Tokens::Identifier(identifier)
+                    Token::Identifier(identifier)
                 }
 
                 '(' => {
                     self.advance();
-                    Tokens::OpenParen
+                    Token::OpenParen
                 }
                 ')' => {
                     self.advance();
-                    Tokens::CloseParen
+                    Token::CloseParen
                 }
                 '+' => {
                     self.advance();
-                    Tokens::BinaryOp(Ops::Add)
+                    Token::BinaryOp(Ops::Add)
                 }
                 '-' => {
                     self.advance();
-                    Tokens::BinaryOp(Ops::Sub)
+                    Token::BinaryOp(Ops::Sub)
                 }
                 '*' => {
                     self.advance();
-                    Tokens::BinaryOp(Ops::Mul)
+                    Token::BinaryOp(Ops::Mul)
                 }
                 '/' => {
                     self.advance();
-                    Tokens::BinaryOp(Ops::Div)
+                    Token::BinaryOp(Ops::Div)
                 },
             
                 _ => panic!("Unhandled char")
