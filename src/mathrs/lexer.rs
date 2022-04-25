@@ -1,6 +1,7 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
+#[derive(Debug)]
 pub enum Ops {
     Add,
     Sub,
@@ -8,6 +9,7 @@ pub enum Ops {
     Div
 }
 
+#[derive(Debug)]
 pub enum Tokens {
     Number(i32),
     Identifier(String),
@@ -16,8 +18,7 @@ pub enum Tokens {
     CloseParen,
 
     UnaryOp(Ops),
-    BinaryOp(Ops),
-    EOF
+    BinaryOp(Ops)
 }
 
 pub struct Lexer<'a> {
@@ -50,7 +51,13 @@ impl<'a> Lexer<'a> {
         self.iter.peek()
     }
 
-    pub fn read_number(&mut self) -> i32 {
+    fn skip_whitespace(&mut self) {
+        while let Some(' ' | '\n' | '\r' | '\t') = self.current_char() {
+            self.advance();
+        }
+    }
+
+    fn read_number(&mut self) -> i32 {
         let mut num_string = String::new();
         
         while let op @ Some('0'..='9') = self.current_char() {
@@ -78,9 +85,14 @@ impl<'a> Lexer<'a> {
         return ident_string;
     }
 
-    pub fn next_token(&mut self) -> Tokens {
+    pub fn next_token(&mut self) -> Option<Tokens> {
         if let Some(c) = self.current_char() {
-            match c {
+            let token = match c {
+                ' ' | '\n' | '\r' | '\t' => {
+                    self.skip_whitespace();
+                    return self.next_token()
+                }
+
                 '0'..='9' => {
                     let number = self.read_number();
                     Tokens::Number(number) 
@@ -90,18 +102,35 @@ impl<'a> Lexer<'a> {
                     Tokens::Identifier(identifier)
                 }
 
-                '(' => Tokens::OpenParen,
-                ')' => Tokens::CloseParen,
-
-                '+' => Tokens::BinaryOp(Ops::Add),
-                '-' => Tokens::BinaryOp(Ops::Sub),
-                '*' => Tokens::BinaryOp(Ops::Mul),
-                '/' => Tokens::BinaryOp(Ops::Div),
+                '(' => {
+                    self.advance();
+                    Tokens::OpenParen
+                }
+                ')' => {
+                    self.advance();
+                    Tokens::CloseParen
+                }
+                '+' => {
+                    self.advance();
+                    Tokens::BinaryOp(Ops::Add)
+                }
+                '-' => {
+                    self.advance();
+                    Tokens::BinaryOp(Ops::Sub)
+                }
+                '*' => {
+                    self.advance();
+                    Tokens::BinaryOp(Ops::Mul)
+                }
+                '/' => {
+                    self.advance();
+                    Tokens::BinaryOp(Ops::Div)
+                },
             
                 _ => panic!("Unhandled char")
-            }
-        } else {
-            Tokens::EOF
+            };
+            return Some(token);
         }
+        return None;
     }
 }
