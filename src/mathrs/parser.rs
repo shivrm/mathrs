@@ -4,7 +4,8 @@ fn variant_eq<T>(a: &T, b: &T) -> bool {
     std::mem::discriminant(a) == std::mem::discriminant(b)
 }
 
-enum AstNode {
+#[derive(Debug)]
+pub enum AstNode {
     BinOp {
         left: Box<AstNode>,
         op: Ops,
@@ -72,7 +73,7 @@ impl<'a> Parser<'a> {
                 })
             }
 
-            Token::EOF => return Some(left),
+            Token::EOF | Token::CloseParen => return Some(left),
             _ => panic!("Unexpected Token")
         }
     }
