@@ -42,6 +42,16 @@ impl<'a> Parser<'a> {
     fn parse_operand(&mut self) -> Option<AstNode> {
         match self.current_token {
 
+            Token::Operator(op) => {
+                self.expect(Token::Operator(op));
+                let operand = self.parse_operand()?;
+
+                Some(AstNode::UnOp {
+                    op,
+                    operand: Box::new(operand)
+                })
+            }
+
             Token::Number(n) => {
                 self.expect(Token::Number(n));
                 Some(AstNode::Number(n))
