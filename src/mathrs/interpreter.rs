@@ -1,12 +1,12 @@
 use crate::mathrs::lexer::Ops;
 use crate::mathrs::parser::AstNode;
 
-fn eval(node: AstNode) -> i32 {
+pub fn interpret(node: AstNode) -> i32 {
     match node {
         AstNode::Number(n) => n,
         AstNode::BinOp {left, op, right} => {
-            let left = eval(*left);
-            let right = eval(*right);
+            let left = interpret(*left);
+            let right = interpret(*right);
 
             match op {
                 Ops::Add => left + right,
@@ -16,7 +16,7 @@ fn eval(node: AstNode) -> i32 {
             }
         }
         AstNode::UnOp {operand, op} => {{
-            let operand = eval(*operand);
+            let operand = interpret(*operand);
             
             match op {
                 Ops::Add => operand,
