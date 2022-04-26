@@ -23,14 +23,14 @@ pub enum Token {
 
 pub struct Lexer<'a> {
     pos: u32,
-    text: &'a str,
+    _text: &'a str,
     iter: Peekable<Chars<'a>>
 }
 
 impl<'a> Lexer<'a> {
     pub fn new(text: &'a str) -> Self {
         return Lexer {
-            text,
+            _text: text,
             pos: 0,
             iter: text.chars().peekable()
         }

@@ -1,9 +1,9 @@
 use crate::mathrs::lexer::Ops;
 use crate::mathrs::parser::AstNode;
 
-pub fn interpret(node: AstNode) -> i32 {
+pub fn interpret(node: AstNode) -> f64 {
     match node {
-        AstNode::Number(n) => n,
+        AstNode::Number(n) => n as f64,
         AstNode::BinOp {left, op, right} => {
             let left = interpret(*left);
             let right = interpret(*right);

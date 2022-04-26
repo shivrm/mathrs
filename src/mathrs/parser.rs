@@ -88,8 +88,8 @@ impl<'a> Parser<'a> {
             while !ops.is_empty() {
                 let top_op = ops.pop()?;
                 if precedence(top_op) > precedence(op) {
-                    let left = nodes.pop()?;
                     let right = nodes.pop()?;
+                    let left = nodes.pop()?;
 
                     nodes.push(AstNode::BinOp {
                         left: Box::new(left),
@@ -110,8 +110,8 @@ impl<'a> Parser<'a> {
         if let Token::EOF | Token::CloseParen = self.current_token {
             while !ops.is_empty() {
                 let op = ops.pop()?;
-                let left = nodes.pop()?;
                 let right = nodes.pop()?;
+                let left = nodes.pop()?;
 
                 nodes.push(AstNode::BinOp {
                     left: Box::new(left),
