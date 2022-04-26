@@ -74,7 +74,7 @@ impl<'a> Parser<'a> {
         match self.current_token {
             Token::Operator(op) => {
                 self.expect(Token::Operator(Ops::Add));
-                let right = self.parse_operand()?;
+                let right = self.parse_expr()?;
 
                 Some(AstNode::BinOp {
                     left: Box::new(left),
