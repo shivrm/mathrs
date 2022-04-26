@@ -12,7 +12,8 @@ pub fn interpret(node: AstNode) -> f64 {
                 Ops::Add => left + right,
                 Ops::Sub => left - right,
                 Ops::Mul => left * right,
-                Ops::Div => left / right
+                Ops::Div => left / right,
+                Ops::Pow => left.powf(right)
             }
         }
         AstNode::UnOp {operand, op} => {{

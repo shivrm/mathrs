@@ -1,12 +1,13 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Ops {
     Add,
     Sub,
     Mul,
-    Div
+    Div,
+    Pow
 }
 
 #[derive(Debug)]
@@ -126,6 +127,10 @@ impl<'a> Lexer<'a> {
                     self.advance();
                     Token::Operator(Ops::Div)
                 },
+                '^' => {
+                    self.advance();
+                    Token::Operator(Ops::Pow)
+                }
             
                 _ => panic!("Unhandled char")
             };

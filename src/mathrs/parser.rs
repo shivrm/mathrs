@@ -6,6 +6,7 @@ fn variant_eq<T>(a: &T, b: &T) -> bool {
 
 fn precedence(op: Ops) -> usize {
     match op {
+        Ops::Pow => 3,
         Ops::Div => 2,
         Ops::Mul => 2,
         Ops::Add => 1,
@@ -87,7 +88,9 @@ impl<'a> Parser<'a> {
             
             while !ops.is_empty() {
                 let top_op = ops.pop()?;
-                if precedence(top_op) > precedence(op) {
+                if precedence(top_op) > precedence(op) || (
+                    precedence(top_op) == precedence(op) && top_op != Ops::Pow
+                ) {
                     let right = nodes.pop()?;
                     let left = nodes.pop()?;
 
