@@ -4,6 +4,15 @@ fn variant_eq<T>(a: &T, b: &T) -> bool {
     std::mem::discriminant(a) == std::mem::discriminant(b)
 }
 
+fn precedence(op: Ops) -> usize {
+    match op {
+        Ops::Div => 2,
+        Ops::Mul => 2,
+        Ops::Add => 1,
+        Ops::Sub => 1
+    }
+}
+
 #[derive(Debug)]
 pub enum AstNode {
     BinOp {
@@ -69,22 +78,50 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse_expr(&mut self) -> Option<AstNode> {
-        let left = self.parse_operand()?;
-        
-        match self.current_token {
-            Token::Operator(op) => {
-                self.expect(Token::Operator(Ops::Add));
-                let right = self.parse_expr()?;
+        let mut nodes: Vec<AstNode> = Vec::new();
+        nodes.push(self.parse_operand()?);
+        let mut ops: Vec<Ops> = Vec::new();
 
-                Some(AstNode::BinOp {
+        while let Token::Operator(op) = self.current_token {
+            self.expect(Token::Operator(op));
+            
+            while !ops.is_empty() {
+                let top_op = ops.pop()?;
+                if precedence(top_op) > precedence(op) {
+                    let left = nodes.pop()?;
+                    let right = nodes.pop()?;
+
+                    nodes.push(AstNode::BinOp {
+                        left: Box::new(left),
+                        op: top_op,
+                        right: Box::new(right)
+                    })
+                } else {
+                    ops.push(top_op);
+                    break;
+                }
+            }
+            ops.push(op);
+
+            let operand = self.parse_operand()?;
+            nodes.push(operand);
+        }
+
+        if let Token::EOF | Token::CloseParen = self.current_token {
+            while !ops.is_empty() {
+                let op = ops.pop()?;
+                let left = nodes.pop()?;
+                let right = nodes.pop()?;
+
+                nodes.push(AstNode::BinOp {
                     left: Box::new(left),
                     op,
                     right: Box::new(right)
                 })
             }
-
-            Token::EOF | Token::CloseParen => return Some(left),
-            _ => panic!("Unexpected Token")
+            return Some(nodes.pop()?);
+        } else {
+            panic!("Unexpected Token");
         }
     }
 }
