@@ -5,15 +5,67 @@ fn variant_eq<T>(a: &T, b: &T) -> bool {
     std::mem::discriminant(a) == std::mem::discriminant(b)
 }
 
+/// Represents an operator during shunting.
+/// The bool indicates if the operator `is_unary`
+type ShuntOp = (Ops, bool);
+
 /// Returns the precedence of an operator
-fn precedence(op: Ops) -> usize {
-    match op {
-        Ops::Pow => 3,
-        Ops::Div => 2,
-        Ops::Mul => 2,
-        Ops::Add => 1,
-        Ops::Sub => 1
+fn precedence((op, unary): ShuntOp) -> usize {
+    if unary {
+        match op {
+            Ops::Add => 3,
+            Ops::Sub => 3,
+            _ => panic!("Invalid unary operator")
+        }
+    } else {
+        match op {
+            Ops::Pow => 4,
+            Ops::Div => 2,
+            Ops::Mul => 2,
+            Ops::Add => 1,
+            Ops::Sub => 1,
+        }
     }
+}
+
+fn push_op((op, unary): ShuntOp, mut nodes: Vec<AstNode>) -> Option<Vec<AstNode>> {
+    if unary {
+        let operand = nodes.pop()?;
+        nodes.push(AstNode::UnOp {
+            operand: Box::new(operand),
+            op
+        })
+    } else {
+        let right = nodes.pop()?;
+        let left = nodes.pop()?;
+
+        nodes.push(AstNode::BinOp {
+            left: Box::new(left),
+            op,
+            right: Box::new(right),
+        })
+    }
+    Some(nodes)
+}
+
+fn shunt_op(
+    op: ShuntOp,
+    mut nodes: Vec<AstNode>,
+    mut ops: Vec<ShuntOp>,
+) -> Option<(Vec<AstNode>, Vec<ShuntOp>)> {
+    while !ops.is_empty() {
+        let top_op = ops.pop()?;
+        if precedence(top_op) > precedence(op)
+            || (precedence(top_op) == precedence(op) && top_op.0 != Ops::Pow)
+        {
+            nodes = push_op(top_op, nodes)?;
+        } else {
+            ops.push(top_op);
+            break;
+        }
+    }
+    ops.push(op);
+    Some((nodes, ops))
 }
 
 /// Enum used to define different kinds of AST nodes
@@ -22,19 +74,19 @@ pub enum AstNode {
     BinOp {
         left: Box<AstNode>,
         op: Ops,
-        right: Box<AstNode>
+        right: Box<AstNode>,
     },
     UnOp {
         op: Ops,
-        operand: Box<AstNode>
+        operand: Box<AstNode>,
     },
-    Number(i32)
+    Number(i32),
 }
 
 /// Used to parse the code
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
-    current_token: Token
+    current_token: Token,
 }
 
 impl<'a> Parser<'a> {
@@ -43,7 +95,7 @@ impl<'a> Parser<'a> {
         let mut lexer = Lexer::new(text);
         Parser {
             current_token: lexer.next_token(),
-            lexer
+            lexer,
         }
     }
 
@@ -64,18 +116,17 @@ impl<'a> Parser<'a> {
     }
 
     /// Parses an operand
-    /// 
+    ///
     /// `operand ::= (operator)operand | operand | '(' expr ')'`
     fn parse_operand(&mut self) -> Option<AstNode> {
         match self.current_token {
-
             Token::Operator(op) => {
                 self.advance();
                 let operand = self.parse_operand()?;
 
                 Some(AstNode::UnOp {
                     op,
-                    operand: Box::new(operand)
+                    operand: Box::new(operand),
                 })
             }
 
@@ -91,50 +142,27 @@ impl<'a> Parser<'a> {
 
                 node
             }
-            _ => panic!("Unexpected token")
+            _ => panic!("Unexpected token"),
         }
     }
 
     /// Parses an expression
-    /// 
+    ///
     /// `expr ::= operand ((operator)operand)*`
     // Uses shunting-yard algorithm, modified for ASTs
-    // TODO: Move unary operator parsing here, 
+    // TODO: Move unary operator parsing here,
     pub fn parse_expr(&mut self) -> Option<AstNode> {
         // Used to keep track of AST nodes
         let mut nodes: Vec<AstNode> = Vec::new();
         nodes.push(self.parse_operand()?);
-        
+
         // Used as operator stack
-        let mut ops: Vec<Ops> = Vec::new();
+        let mut ops: Vec<ShuntOp> = Vec::new();
 
         // Parse subsequent operator-operand pairs
         while let Token::Operator(op) = self.current_token {
             self.advance();
-            
-            // Handle operator precedence
-            while !ops.is_empty() {
-                let top_op = ops.pop()?;
-                if precedence(top_op) > precedence(op) || (
-                    precedence(top_op) == precedence(op) && top_op != Ops::Pow
-                ) {
-                    
-                    // Operands for the operator. right comes first as it is stack-based
-                    let right = nodes.pop()?;
-                    let left = nodes.pop()?;
-
-                    // Add operator to AST node stack
-                    nodes.push(AstNode::BinOp {
-                        left: Box::new(left),
-                        op: top_op,
-                        right: Box::new(right)
-                    })
-                } else {
-                    ops.push(top_op);
-                    break;
-                }
-            }
-            ops.push(op);
+            (nodes, ops) = shunt_op((op, false), nodes, ops)?;            
 
             // Every operator should be followed by an operand
             let operand = self.parse_operand()?;
@@ -146,14 +174,7 @@ impl<'a> Parser<'a> {
         if let Token::EOF | Token::CloseParen = self.current_token {
             while !ops.is_empty() {
                 let op = ops.pop()?;
-                let right = nodes.pop()?;
-                let left = nodes.pop()?;
-
-                nodes.push(AstNode::BinOp {
-                    left: Box::new(left),
-                    op,
-                    right: Box::new(right)
-                })
+                nodes = push_op(op, nodes)?;
             }
             return Some(nodes.pop()?);
         } else {
