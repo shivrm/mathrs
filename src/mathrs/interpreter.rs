@@ -1,9 +1,11 @@
 use crate::mathrs::lexer::Ops;
 use crate::mathrs::parser::AstNode;
 
+/// Recursively the value of an AST
 pub fn interpret(node: AstNode) -> f64 {
     match node {
         AstNode::Number(n) => n as f64,
+        
         AstNode::BinOp {left, op, right} => {
             let left = interpret(*left);
             let right = interpret(*right);
@@ -16,6 +18,7 @@ pub fn interpret(node: AstNode) -> f64 {
                 Ops::Pow => left.powf(right)
             }
         }
+        
         AstNode::UnOp {operand, op} => {{
             let operand = interpret(*operand);
             

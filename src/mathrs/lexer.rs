@@ -1,6 +1,7 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
+/// Enum that contains operators.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Ops {
     Add,
@@ -10,6 +11,7 @@ pub enum Ops {
     Pow
 }
 
+/// Enum used to represent a token
 #[derive(Debug)]
 pub enum Token {
     Number(i32),
@@ -22,6 +24,7 @@ pub enum Token {
     EOF
 }
 
+/// Used for lexing math expressions
 pub struct Lexer<'a> {
     pos: u32,
     _text: &'a str,
@@ -29,6 +32,9 @@ pub struct Lexer<'a> {
 }
 
 impl<'a> Lexer<'a> {
+    /// Used to create a new lexer:
+    ///
+    /// `text`: Text to lex
     pub fn new(text: &'a str) -> Self {
         return Lexer {
             _text: text,
@@ -37,6 +43,8 @@ impl<'a> Lexer<'a> {
         }
     }
 
+    /// Advances lexer to next position on the text
+    /// and returns the new `current_char`
     fn advance(&mut self) -> Option<char> {
         let next_char = self.iter.next();
 
@@ -47,45 +55,45 @@ impl<'a> Lexer<'a> {
         return next_char;
     }
 
+    /// Inline function that returns the current character
     #[inline]
     fn current_char(&mut self) -> Option<&char> {
         self.iter.peek()
     }
 
+    /// Skips consecutive whitespace characters
     fn skip_whitespace(&mut self) {
         while let Some(' ' | '\n' | '\r' | '\t') = self.current_char() {
             self.advance();
         }
     }
 
+    /// Reads a number (consecutive digits)
+    // TODO: Add support for reading floats
     fn read_number(&mut self) -> i32 {
         let mut num_string = String::new();
         
-        while let op @ Some('0'..='9') = self.current_char() {
-            match op {
-                Some(&c) => num_string.push(c),
-                None => break
-            };
+        while let c @ Some('0'..='9') = self.current_char() {
+            num_string.push(*c.unwrap());
             self.advance();
         }
 
         return num_string.parse().unwrap();
     }
 
+    /// Reads an identifier (consecutive letters)
     fn read_identifier(&mut self) -> String {
         let mut ident_string = String::new();
         
-        while let op @ Some('A'..='Z' | 'a'..='z') = self.current_char() {
-            match op {
-                Some(&c) => ident_string.push(c),
-                None => break
-            };
+        while let c @ Some('A'..='Z' | 'a'..='z') = self.current_char() {
+            ident_string.push(*c.unwrap());
             self.advance();
         }
 
         return ident_string;
     }
 
+    /// Returns the next token, or `Token::EOF` if at end-of-string
     pub fn next_token(&mut self) -> Token {
         if let Some(c) = self.current_char() {
             let token = match c {
