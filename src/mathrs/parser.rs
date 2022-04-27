@@ -28,14 +28,17 @@ fn precedence((op, unary): ShuntOp) -> usize {
     }
 }
 
+/// Pushes an operator as an AST node onto a stack of nodes
 fn push_op((op, unary): ShuntOp, mut nodes: Vec<AstNode>) -> Option<Vec<AstNode>> {
     if unary {
+        // Unary operators have only a single operand
         let operand = nodes.pop()?;
         nodes.push(AstNode::UnOp {
             operand: Box::new(operand),
             op
         })
     } else {
+        // Right comes before left because it is stack based
         let right = nodes.pop()?;
         let left = nodes.pop()?;
 
@@ -48,11 +51,14 @@ fn push_op((op, unary): ShuntOp, mut nodes: Vec<AstNode>) -> Option<Vec<AstNode>
     Some(nodes)
 }
 
+/// Shunts an operator
 fn shunt_op(
     op: ShuntOp,
     mut nodes: Vec<AstNode>,
     mut ops: Vec<ShuntOp>,
 ) -> Option<(Vec<AstNode>, Vec<ShuntOp>)> {
+    // While operator stack is not empty check if top operator has higher precedence
+    // and apply that first... (https://en.wikipedia.org/wiki/Shunting-yard_algorithm)
     while !ops.is_empty() {
         let top_op = ops.pop()?;
         if precedence(top_op) > precedence(op)
