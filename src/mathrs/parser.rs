@@ -11,12 +11,15 @@ fn variant_eq<T>(a: &T, b: &T) -> bool {
 type ShuntOp = (Ops, bool);
 
 /// Returns the precedence of an operator
-fn precedence((op, unary): ShuntOp) -> usize {
-    if unary {
+fn precedence((op, unary): ShuntOp) -> Result<usize, Error> {
+    let p = if unary {
         match op {
             Ops::Add => 3,
             Ops::Sub => 3,
-            _ => panic!("Invalid unary operator")
+            _ => return Err(Error {
+                title: "Invalid unary operator".to_owned(),
+                desc: "Only + and - can be used as unary operators".to_owned()
+            })
         }
     } else {
         match op {
@@ -26,7 +29,8 @@ fn precedence((op, unary): ShuntOp) -> usize {
             Ops::Add => 1,
             Ops::Sub => 1,
         }
-    }
+    };
+    Ok(p)
 }
 
 /// Pushes an operator as an AST node onto a stack of nodes
@@ -80,8 +84,8 @@ fn shunt_op(
     // and apply that first... (https://en.wikipedia.org/wiki/Shunting-yard_algorithm)
     while !ops.is_empty() {
         let top_op = ops.pop().unwrap();
-        if precedence(top_op) > precedence(op)
-            || (precedence(top_op) == precedence(op) && top_op.0 != Ops::Pow)
+        if precedence(top_op)? > precedence(op)?
+            || (precedence(top_op)? == precedence(op)? && top_op.0 != Ops::Pow)
         {
             nodes = push_op(top_op, nodes)?;
         } else {
@@ -116,28 +120,33 @@ pub struct Parser<'a> {
 
 impl<'a> Parser<'a> {
     /// Creates a new parser
-    pub fn new(text: &'a str) -> Self {
+    pub fn new(text: &'a str) -> Result<Self, Error> {
         let mut lexer = Lexer::new(text);
-        Parser {
-            current_token: lexer.next_token(),
+        Ok(Parser {
+            current_token: lexer.next_token()?,
             lexer,
-        }
+        })
     }
 
     /// Tells the parser to advance to the next token.
     /// Should be used instead of `expect` when it is guaranteed that
     /// token will be of the correct type.
     #[inline]
-    fn advance(&mut self) {
-        self.current_token = self.lexer.next_token();
+    fn advance(&mut self) -> Result<(), Error> {
+        self.current_token = self.lexer.next_token()?;
+        Ok(())
     }
 
     /// Tells the parser to expect a token of a type
-    fn expect(&mut self, token_type: Token) {
+    fn expect(&mut self, token_type: Token) -> Result<(), Error> {
         if !variant_eq(&self.current_token, &token_type) {
-            panic!("Expected {token_type:?}");
+            return Err(Error {
+                title: format!("Expected {token_type:?}"),
+                desc: format!("Current token was {:?}", self.current_token)
+            })
         }
-        self.current_token = self.lexer.next_token();
+        self.current_token = self.lexer.next_token()?;
+        Ok(())
     }
 
     /// Parses an operand
@@ -146,18 +155,27 @@ impl<'a> Parser<'a> {
     fn parse_operand(&mut self) -> Result<AstNode, Error> {
         match self.current_token {
             Token::Number(n) => {
-                self.advance();
+                self.advance()?;
                 Ok(AstNode::Number(n))
             }
 
             Token::OpenParen => {
-                self.advance();
+                self.advance()?;
                 let node = self.parse_expr();
-                self.expect(Token::CloseParen);
+                self.expect(Token::CloseParen)?;
 
                 node
             }
-            _ => panic!("Unexpected token"),
+
+            Token::EOF => Err(Error {
+                title: "Unexpected EOF while reading operand".to_owned(),
+                desc: "I don't really have a description for this".to_owned()
+            }),
+
+            _ => Err(Error {
+                title: "Unexpected token in operand".to_owned(),
+                desc: "Operand should start with number, unary operator, or parenthesis".to_owned()
+            }),
         }
     }
 
@@ -171,7 +189,7 @@ impl<'a> Parser<'a> {
 
         // Parse initial unary operators
         while let Token::Operator(op) = self.current_token {
-            self.advance();
+            self.advance()?;
             (nodes, ops) = shunt_op((op, true), nodes, ops)?;
         }
 
@@ -179,14 +197,14 @@ impl<'a> Parser<'a> {
 
         // Parse subsequent operator-operand pairs
         while let Token::Operator(op) = self.current_token {
-            self.advance();
+            self.advance()?;
             (nodes, ops) = shunt_op((op, false), nodes, ops)?;            
 
             // Every operator should be followed by an operand
 
             // Parse any unary operators before operand
             while let Token::Operator(op) = self.current_token {
-                self.advance();
+                self.advance()?;
                 (nodes, ops) = shunt_op((op, true), nodes, ops)?;
             }
 
@@ -209,7 +227,10 @@ impl<'a> Parser<'a> {
                 })
             }
         } else {
-            panic!("Unexpected Token");
+            Err(Error {
+                title: "Unexpected token after expression".to_owned(),
+                desc: format!("{:?} is not allowed after an expression", self.current_token)
+            })
         }
     }
 }

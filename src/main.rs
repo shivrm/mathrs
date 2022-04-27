@@ -27,6 +27,6 @@ fn main() {
 
     match mathrs::eval(&mut text) {
         Ok(n) => println!("Value {n}"),
-        Err(_) => println!("We got an error!")
+        Err(e) => println!("Error: {e}")
     }
 }

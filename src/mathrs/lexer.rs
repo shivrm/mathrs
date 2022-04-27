@@ -1,6 +1,8 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
+use crate::mathrs::Error;
+
 /// Enum that contains operators.
 #[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Ops {
@@ -94,7 +96,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Returns the next token, or `Token::EOF` if at end-of-string
-    pub fn next_token(&mut self) -> Token {
+    pub fn next_token(&mut self) -> Result<Token, Error> {
         if let Some(c) = self.current_char() {
             let token = match c {
                 ' ' | '\n' | '\r' | '\t' => {
@@ -140,10 +142,13 @@ impl<'a> Lexer<'a> {
                     Token::Operator(Ops::Pow)
                 }
             
-                _ => panic!("Unhandled char")
+                _ => return Err(Error {
+                    title: "Unexpected character".to_owned(),
+                    desc: "The lexer does not know how to handle this".to_owned()
+                })
             };
-            return token;
+            return Ok(token);
         }
-        return Token::EOF;
+        return Ok(Token::EOF);
     }
 }
