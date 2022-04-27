@@ -25,6 +25,8 @@ fn main() {
         text = text + &line;
     }
 
-    let result = mathrs::eval(&mut text).unwrap();
-    println!("Value: {result}");
+    match mathrs::eval(&mut text) {
+        Ok(n) => println!("Value {n}"),
+        Err(_) => println!("We got an error!")
+    }
 }

@@ -1,4 +1,5 @@
 use crate::mathrs::lexer::*;
+use crate::mathrs::Error;
 
 /// Compares if the variants of two enums are the same (ignoring values)
 fn variant_eq<T>(a: &T, b: &T) -> bool {
@@ -29,18 +30,36 @@ fn precedence((op, unary): ShuntOp) -> usize {
 }
 
 /// Pushes an operator as an AST node onto a stack of nodes
-fn push_op((op, unary): ShuntOp, mut nodes: Vec<AstNode>) -> Option<Vec<AstNode>> {
+fn push_op((op, unary): ShuntOp, mut nodes: Vec<AstNode>) -> Result<Vec<AstNode>, Error> {
     if unary {
         // Unary operators have only a single operand
-        let operand = nodes.pop()?;
+        let operand = match nodes.pop() {
+            Some(n) => n,
+            None => return Err(Error {
+                title: "Missing argument for operator".to_owned(),
+                desc: "Node stack was empty when looking for argument".to_owned()
+            })
+        };
         nodes.push(AstNode::UnOp {
             operand: Box::new(operand),
             op
         })
     } else {
         // Right comes before left because it is stack based
-        let right = nodes.pop()?;
-        let left = nodes.pop()?;
+        let right = match nodes.pop() {
+            Some(n) => n,
+            None => return Err(Error {
+                title: "Missing argument for operator".to_owned(),
+                desc: "Node stack was empty when looking for argument".to_owned()
+            })
+        };
+        let left = match nodes.pop() {
+            Some(n) => n,
+            None => return Err(Error {
+                title: "Missing argument for operator".to_owned(),
+                desc: "Node stack was empty when looking for argument".to_owned()
+            })
+        };
 
         nodes.push(AstNode::BinOp {
             left: Box::new(left),
@@ -48,7 +67,7 @@ fn push_op((op, unary): ShuntOp, mut nodes: Vec<AstNode>) -> Option<Vec<AstNode>
             right: Box::new(right),
         })
     }
-    Some(nodes)
+    Ok(nodes)
 }
 
 /// Shunts an operator
@@ -56,11 +75,11 @@ fn shunt_op(
     op: ShuntOp,
     mut nodes: Vec<AstNode>,
     mut ops: Vec<ShuntOp>,
-) -> Option<(Vec<AstNode>, Vec<ShuntOp>)> {
+) -> Result<(Vec<AstNode>, Vec<ShuntOp>), Error> {
     // While operator stack is not empty check if top operator has higher precedence
     // and apply that first... (https://en.wikipedia.org/wiki/Shunting-yard_algorithm)
     while !ops.is_empty() {
-        let top_op = ops.pop()?;
+        let top_op = ops.pop().unwrap();
         if precedence(top_op) > precedence(op)
             || (precedence(top_op) == precedence(op) && top_op.0 != Ops::Pow)
         {
@@ -71,7 +90,7 @@ fn shunt_op(
         }
     }
     ops.push(op);
-    Some((nodes, ops))
+    Ok((nodes, ops))
 }
 
 /// Enum used to define different kinds of AST nodes
@@ -124,11 +143,11 @@ impl<'a> Parser<'a> {
     /// Parses an operand
     ///
     /// `operand ::= (operator)operand | operand | '(' expr ')'`
-    fn parse_operand(&mut self) -> Option<AstNode> {
+    fn parse_operand(&mut self) -> Result<AstNode, Error> {
         match self.current_token {
             Token::Number(n) => {
                 self.advance();
-                Some(AstNode::Number(n))
+                Ok(AstNode::Number(n))
             }
 
             Token::OpenParen => {
@@ -146,7 +165,7 @@ impl<'a> Parser<'a> {
     ///
     /// `expr ::= operand ((operator)operand)*`
     // Uses shunting-yard algorithm, modified for ASTs
-    pub fn parse_expr(&mut self) -> Option<AstNode> {
+    pub fn parse_expr(&mut self) -> Result<AstNode, Error> {
         let mut nodes: Vec<AstNode> = Vec::new(); // Used to keep track of AST nodes
         let mut ops: Vec<ShuntOp> = Vec::new(); // Used as operator stack
 
@@ -179,10 +198,16 @@ impl<'a> Parser<'a> {
         // Move remaining operators from operator stack to node stack
         if let Token::EOF | Token::CloseParen = self.current_token {
             while !ops.is_empty() {
-                let op = ops.pop()?;
+                let op = ops.pop().unwrap();
                 nodes = push_op(op, nodes)?;
             }
-            return Some(nodes.pop()?);
+            return match nodes.pop() {
+                Some(n) => Ok(n),
+                None => Err(Error {
+                    title: "No node to return".to_owned(),
+                    desc: "Node stack was empty when looking for a node to return".to_owned()
+                })
+            }
         } else {
             panic!("Unexpected Token");
         }
