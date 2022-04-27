@@ -120,16 +120,6 @@ impl<'a> Parser<'a> {
     /// `operand ::= (operator)operand | operand | '(' expr ')'`
     fn parse_operand(&mut self) -> Option<AstNode> {
         match self.current_token {
-            Token::Operator(op) => {
-                self.advance();
-                let operand = self.parse_operand()?;
-
-                Some(AstNode::UnOp {
-                    op,
-                    operand: Box::new(operand),
-                })
-            }
-
             Token::Number(n) => {
                 self.advance();
                 Some(AstNode::Number(n))
@@ -150,14 +140,17 @@ impl<'a> Parser<'a> {
     ///
     /// `expr ::= operand ((operator)operand)*`
     // Uses shunting-yard algorithm, modified for ASTs
-    // TODO: Move unary operator parsing here,
     pub fn parse_expr(&mut self) -> Option<AstNode> {
-        // Used to keep track of AST nodes
-        let mut nodes: Vec<AstNode> = Vec::new();
-        nodes.push(self.parse_operand()?);
+        let mut nodes: Vec<AstNode> = Vec::new(); // Used to keep track of AST nodes
+        let mut ops: Vec<ShuntOp> = Vec::new(); // Used as operator stack
 
-        // Used as operator stack
-        let mut ops: Vec<ShuntOp> = Vec::new();
+        // Parse initial unary operators
+        while let Token::Operator(op) = self.current_token {
+            self.advance();
+            (nodes, ops) = shunt_op((op, true), nodes, ops)?;
+        }
+
+        nodes.push(self.parse_operand()?);
 
         // Parse subsequent operator-operand pairs
         while let Token::Operator(op) = self.current_token {
@@ -165,6 +158,13 @@ impl<'a> Parser<'a> {
             (nodes, ops) = shunt_op((op, false), nodes, ops)?;            
 
             // Every operator should be followed by an operand
+
+            // Parse any unary operators before operand
+            while let Token::Operator(op) = self.current_token {
+                self.advance();
+                (nodes, ops) = shunt_op((op, true), nodes, ops)?;
+            }
+
             let operand = self.parse_operand()?;
             nodes.push(operand);
         }
