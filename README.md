@@ -18,10 +18,9 @@ A simple math expression parser written in Rust
    ```
 
 # Usage
- - Type in a math expression. You can use multiple lines.
- - Program will read input until a blank line is entered.
- - Errors in the math expression will be reported.
- - After evaluation, value of the expression will be displayed.
+ - Type in a math expression.
+ - The program will print out the value, or errors, if any
+ - Type 'q' to quit.
 
 # License
 [MIT](LICENSE.md)

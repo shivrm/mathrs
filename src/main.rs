@@ -4,29 +4,36 @@ mod mathrs;
 
 fn main() {
     print!(concat!(
-        "Welcome to mathrs, a math expression parser!\n",
-        "Please enter your math expression.\n",
-        "You can use multiple line to enter your expression.\n",
-        "Entering a blank line will start evaluation.\n\n"
+        "mathrs v1.0.0\n",
+        "Type 'bugs' or 'copyright for more information.\n",
+        "Type 'q' or 'quit' to quit\n"
     ));
     io::stdout().flush().expect("Could not flush buffer");
-
-    let mut text = String::new();
     
     loop {
+        print!(">>> ");
+        io::stdout().flush().expect("Could not flush buffer");
+    
         let mut line = String::new();
         io::stdin()
             .read_line(&mut line)
             .expect("Failed to read line");
-
-        if line.trim().is_empty() {
-            break;
+            
+        match &line.trim()[..] {
+            "bugs" => println!("Report bugs at https://github.com/shivrm/mathrs/issues"),
+            "copyright" => println!("Copyright (c) 2022 shivrm"),
+            "quit" | "q" => {
+                println!("Quitting");
+                break;
+            }
+            _ => {
+                match mathrs::eval(&mut line) {
+                    Ok(n) => println!("\x1b[32m{n}\x1b[0m\n"),
+                    Err(e) => println!("{e}")
+                }
+            }
         }
-        text = text + &line;
+
     }
 
-    match mathrs::eval(&mut text) {
-        Ok(n) => println!("\x1b[32m{n}\x1b[0m"),
-        Err(e) => println!("{e}")
-    }
 }
