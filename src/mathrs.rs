@@ -11,13 +11,13 @@ pub use interpreter::interpret;
 pub struct Error {
     title: String,
     desc: String,
-    line: u32,
-    col: u32
+    line: usize,
+    col: usize
 }
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} - {}", self.title, self.desc)
+        write!(f, "{} at line {}, column {}\n{}", self.title, self.line, self.col, self.desc)
     }
 }
 

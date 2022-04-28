@@ -31,8 +31,9 @@ pub enum AstNode {
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
     current_token: Token,
-    line: u32,
-    col: u32
+    line: usize,
+    col: usize,
+    depth: isize
 }
 
 impl<'a> Parser<'a> {
@@ -44,7 +45,8 @@ impl<'a> Parser<'a> {
             current_token: token,
             line,
             col,
-            lexer
+            lexer,
+            depth: 0
         })
     }
     
@@ -54,7 +56,30 @@ impl<'a> Parser<'a> {
     #[inline]
     fn advance(&mut self) -> Result<(), Error> {
         let (token, line, col) = self.lexer.next_token()?;
-        println!("{token:?} {line} {col}");
+
+        match token {
+            Token::OpenParen => self.depth += 1,
+            Token::CloseParen => self.depth -= 1,
+            Token::EOF => {
+                if self.depth > 0 {
+                    return Err(Error {
+                        title: "Unclosed parenthesis".to_owned(),
+                        desc: "EOF occurred while some parentheses were unclosed".to_owned(),
+                        line: self.line, col: self.col
+                    })
+                }
+            }
+            _ => (())
+        }
+
+        if self.depth < 0 {
+            return Err(Error {
+                title: "Mismatched closing parenthesis".to_owned(),
+                desc: "Closing parenthesis without matching opening was detected".to_owned(),
+                line: self.line, col: self.col
+            })
+        }
+
         self.current_token = token;
         self.line = line;
         self.col = col;

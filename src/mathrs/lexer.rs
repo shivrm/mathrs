@@ -28,11 +28,11 @@ pub enum Token {
 
 /// Used for lexing math expressions
 pub struct Lexer<'a> {
-    pos: u32,
+    pos: usize,
     _text: &'a str,
     iter: Peekable<Chars<'a>>,
-    last_newline: u32,
-    line: u32
+    last_newline: usize,
+    line: usize
 }
 
 impl<'a> Lexer<'a> {
@@ -105,7 +105,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Returns the next token, or `Token::EOF` if at end-of-string
-    pub fn next_token(&mut self) -> Result<(Token, u32, u32), Error> {
+    pub fn next_token(&mut self) -> Result<(Token, usize, usize), Error> {
         if let Some(c) = self.current_char() {
             let token = match c {
                 ' ' | '\n' | '\r' | '\t' => {
