@@ -1,4 +1,3 @@
-use std::iter::Peekable;
 use std::str::Chars;
 
 use crate::mathrs::Error;
@@ -31,7 +30,7 @@ pub enum Token {
 pub struct Lexer<'a> {
     pos: usize,
     _text: &'a str,
-    iter: Peekable<Chars<'a>>,
+    iter: Chars<'a>,
     last_newline: usize,
     line: usize
 }
@@ -44,7 +43,7 @@ impl<'a> Lexer<'a> {
         return Lexer {
             _text: text,
             pos: 0,
-            iter: text.chars().peekable(),
+            iter: text.chars(),
             last_newline: 0,
             line: 1
         }
@@ -64,8 +63,8 @@ impl<'a> Lexer<'a> {
 
     /// Inline function that returns the current character
     #[inline]
-    fn current_char(&mut self) -> Option<&char> {
-        self.iter.peek()
+    fn current_char(&mut self) -> Option<char> {
+        self.iter.clone().next()
     }
 
     /// Skips consecutive whitespace characters
@@ -86,7 +85,7 @@ impl<'a> Lexer<'a> {
         let mut num_string = String::new();
         
         while let c @ Some('0'..='9') = self.current_char() {
-            num_string.push(*c.unwrap());
+            num_string.push(c.unwrap());
             self.advance();
         }
 
@@ -98,7 +97,7 @@ impl<'a> Lexer<'a> {
         let mut ident_string = String::new();
         
         while let c @ Some('A'..='Z' | 'a'..='z') = self.current_char() {
-            ident_string.push(*c.unwrap());
+            ident_string.push(c.unwrap());
             self.advance();
         }
 
