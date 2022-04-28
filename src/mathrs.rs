@@ -10,7 +10,9 @@ pub use interpreter::interpret;
 
 pub struct Error {
     title: String,
-    desc: String
+    desc: String,
+    line: u32,
+    col: u32
 }
 
 impl fmt::Display for Error {

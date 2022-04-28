@@ -153,7 +153,8 @@ impl<'a> Lexer<'a> {
             
                 _ => return Err(Error {
                     title: "Unexpected character".to_owned(),
-                    desc: "The lexer does not know how to handle this".to_owned()
+                    desc: "The lexer does not know how to handle this".to_owned(),
+                    line: self.line, col: self.pos - self.last_newline
                 })
             };
             let col = self.pos - self.last_newline;

@@ -10,92 +10,7 @@ fn variant_eq<T>(a: &T, b: &T) -> bool {
 /// The bool indicates if the operator `is_unary`
 type ShuntOp = (Ops, bool);
 
-/// Returns the precedence of an operator
-fn precedence((op, unary): ShuntOp) -> Result<usize, Error> {
-    let p = if unary {
-        match op {
-            Ops::Add => 3,
-            Ops::Sub => 3,
-            _ => return Err(Error {
-                title: "Invalid unary operator".to_owned(),
-                desc: "Only + and - can be used as unary operators".to_owned()
-            })
-        }
-    } else {
-        match op {
-            Ops::Pow => 4,
-            Ops::Div => 2,
-            Ops::Mul => 2,
-            Ops::Add => 1,
-            Ops::Sub => 1,
-        }
-    };
-    Ok(p)
-}
 
-/// Pushes an operator as an AST node onto a stack of nodes
-fn push_op((op, unary): ShuntOp, mut nodes: Vec<AstNode>) -> Result<Vec<AstNode>, Error> {
-    if unary {
-        // Unary operators have only a single operand
-        let operand = match nodes.pop() {
-            Some(n) => n,
-            None => return Err(Error {
-                title: "Missing argument for operator".to_owned(),
-                desc: "Node stack was empty when looking for argument".to_owned()
-            })
-        };
-        nodes.push(AstNode::UnOp {
-            operand: Box::new(operand),
-            op
-        })
-    } else {
-        // Right comes before left because it is stack based
-        let right = match nodes.pop() {
-            Some(n) => n,
-            None => return Err(Error {
-                title: "Missing argument for operator".to_owned(),
-                desc: "Node stack was empty when looking for argument".to_owned()
-            })
-        };
-        let left = match nodes.pop() {
-            Some(n) => n,
-            None => return Err(Error {
-                title: "Missing argument for operator".to_owned(),
-                desc: "Node stack was empty when looking for argument".to_owned()
-            })
-        };
-
-        nodes.push(AstNode::BinOp {
-            left: Box::new(left),
-            op,
-            right: Box::new(right),
-        })
-    }
-    Ok(nodes)
-}
-
-/// Shunts an operator
-fn shunt_op(
-    op: ShuntOp,
-    mut nodes: Vec<AstNode>,
-    mut ops: Vec<ShuntOp>,
-) -> Result<(Vec<AstNode>, Vec<ShuntOp>), Error> {
-    // While operator stack is not empty check if top operator has higher precedence
-    // and apply that first... (https://en.wikipedia.org/wiki/Shunting-yard_algorithm)
-    while !ops.is_empty() {
-        let top_op = ops.pop().unwrap();
-        if precedence(top_op)? > precedence(op)?
-            || (precedence(top_op)? == precedence(op)? && top_op.0 != Ops::Pow)
-        {
-            nodes = push_op(top_op, nodes)?;
-        } else {
-            ops.push(top_op);
-            break;
-        }
-    }
-    ops.push(op);
-    Ok((nodes, ops))
-}
 
 /// Enum used to define different kinds of AST nodes
 #[derive(Debug)]
@@ -132,7 +47,7 @@ impl<'a> Parser<'a> {
             lexer
         })
     }
-
+    
     /// Tells the parser to advance to the next token.
     /// Should be used instead of `expect` when it is guaranteed that
     /// token will be of the correct type.
@@ -145,18 +60,19 @@ impl<'a> Parser<'a> {
         self.col = col;
         Ok(())
     }
-
+    
     /// Tells the parser to expect a token of a type
     fn expect(&mut self, token_type: Token) -> Result<(), Error> {
         if !variant_eq(&self.current_token, &token_type) {
             return Err(Error {
                 title: format!("Expected {token_type:?}"),
-                desc: format!("Current token was {:?}", self.current_token)
+                desc: format!("Current token was {:?}", self.current_token),
+                line: self.line, col: self.col
             })
         }
         self.advance()
     }
-
+    
     /// Parses an operand
     ///
     /// `operand ::= (operator)operand | operand | '(' expr ')'`
@@ -166,25 +82,119 @@ impl<'a> Parser<'a> {
                 self.advance()?;
                 Ok(AstNode::Number(n))
             }
-
+            
             Token::OpenParen => {
                 self.advance()?;
                 let node = self.parse_expr();
                 self.expect(Token::CloseParen)?;
-
+                
                 node
             }
-
+            
             Token::EOF => Err(Error {
                 title: "Unexpected EOF while reading operand".to_owned(),
-                desc: "I don't really have a description for this".to_owned()
+                desc: "I don't really have a description for this".to_owned(),
+                line: self.line, col: self.col
             }),
-
+            
             _ => Err(Error {
                 title: "Unexpected token in operand".to_owned(),
-                desc: "Operand should start with number, unary operator, or parenthesis".to_owned()
+                desc: "Operand should start with number, unary operator, or parenthesis".to_owned(),
+                line: self.line, col: self.col
             }),
         }
+    }
+    
+    /// Returns the precedence of an operator
+    fn precedence(&mut self, (op, unary): ShuntOp) -> Result<usize, Error> {
+        let p = if unary {
+            match op {
+                Ops::Add => 3,
+                Ops::Sub => 3,
+                _ => return Err(Error {
+                    title: "Invalid unary operator".to_owned(),
+                    desc: "Only + and - can be used as unary operators".to_owned(),
+                    line: self.line, col: self.col
+                })
+            }
+        } else {
+            match op {
+                Ops::Pow => 4,
+                Ops::Div => 2,
+                Ops::Mul => 2,
+                Ops::Add => 1,
+                Ops::Sub => 1,
+            }
+        };
+        Ok(p)
+    }
+    
+    /// Pushes an operator as an AST node onto a stack of nodes
+    fn push_op(&mut self, (op, unary): ShuntOp, mut nodes: Vec<AstNode>) -> Result<Vec<AstNode>, Error> {
+        if unary {
+            // Unary operators have only a single operand
+            let operand = match nodes.pop() {
+                Some(n) => n,
+                None => return Err(Error {
+                    title: "Missing argument for operator".to_owned(),
+                    desc: "Node stack was empty when looking for argument".to_owned(),
+                    line: self.line, col: self.col
+                })
+            };
+            nodes.push(AstNode::UnOp {
+                operand: Box::new(operand),
+                op
+            })
+        } else {
+            // Right comes before left because it is stack based
+            let right = match nodes.pop() {
+                Some(n) => n,
+                None => return Err(Error {
+                    title: "Missing argument for operator".to_owned(),
+                    desc: "Node stack was empty when looking for argument".to_owned(),
+                    line: self.line, col: self.col
+                })
+            };
+            let left = match nodes.pop() {
+                Some(n) => n,
+                None => return Err(Error {
+                    title: "Missing argument for operator".to_owned(),
+                    desc: "Node stack was empty when looking for argument".to_owned(),
+                    line: self.line, col: self.col
+                })
+            };
+    
+            nodes.push(AstNode::BinOp {
+                left: Box::new(left),
+                op,
+                right: Box::new(right),
+            })
+        }
+        Ok(nodes)
+    }
+    
+    /// Shunts an operator
+    fn shunt_op(
+        &mut self,
+        op: ShuntOp,
+        mut nodes: Vec<AstNode>,
+        mut ops: Vec<ShuntOp>,
+    ) -> Result<(Vec<AstNode>, Vec<ShuntOp>), Error> {
+        // While operator stack is not empty check if top operator has higher precedence
+        // and apply that first... (https://en.wikipedia.org/wiki/Shunting-yard_algorithm)
+        while !ops.is_empty() {
+            let top_op = ops.pop().unwrap();
+            if self.precedence(top_op)? > self.precedence(op)?
+                || (self.precedence(top_op)? == self.precedence(op)? && top_op.0 != Ops::Pow)
+            {
+                nodes = self.push_op(top_op, nodes)?;
+            } else {
+                ops.push(top_op);
+                break;
+            }
+        }
+        ops.push(op);
+        Ok((nodes, ops))
     }
 
     /// Parses an expression
@@ -198,7 +208,7 @@ impl<'a> Parser<'a> {
         // Parse initial unary operators
         while let Token::Operator(op) = self.current_token {
             self.advance()?;
-            (nodes, ops) = shunt_op((op, true), nodes, ops)?;
+            (nodes, ops) = self.shunt_op((op, true), nodes, ops)?;
         }
 
         nodes.push(self.parse_operand()?);
@@ -206,14 +216,14 @@ impl<'a> Parser<'a> {
         // Parse subsequent operator-operand pairs
         while let Token::Operator(op) = self.current_token {
             self.advance()?;
-            (nodes, ops) = shunt_op((op, false), nodes, ops)?;            
+            (nodes, ops) = self.shunt_op((op, false), nodes, ops)?;            
 
             // Every operator should be followed by an operand
 
             // Parse any unary operators before operand
             while let Token::Operator(op) = self.current_token {
                 self.advance()?;
-                (nodes, ops) = shunt_op((op, true), nodes, ops)?;
+                (nodes, ops) = self.shunt_op((op, true), nodes, ops)?;
             }
 
             let operand = self.parse_operand()?;
@@ -225,19 +235,21 @@ impl<'a> Parser<'a> {
         if let Token::EOF | Token::CloseParen = self.current_token {
             while !ops.is_empty() {
                 let op = ops.pop().unwrap();
-                nodes = push_op(op, nodes)?;
+                nodes = self.push_op(op, nodes)?;
             }
             return match nodes.pop() {
                 Some(n) => Ok(n),
                 None => Err(Error {
                     title: "No node to return".to_owned(),
-                    desc: "Node stack was empty when looking for a node to return".to_owned()
+                    desc: "Node stack was empty when looking for a node to return".to_owned(),
+                    line: self.line, col: self.col
                 })
             }
         } else {
             Err(Error {
                 title: "Unexpected token after expression".to_owned(),
-                desc: format!("{:?} is not allowed after an expression", self.current_token)
+                desc: format!("{:?} is not allowed after an expression", self.current_token),
+                line: self.line, col: self.col
             })
         }
     }
