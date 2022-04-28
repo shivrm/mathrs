@@ -30,7 +30,9 @@ pub enum Token {
 pub struct Lexer<'a> {
     pos: u32,
     _text: &'a str,
-    iter: Peekable<Chars<'a>>
+    iter: Peekable<Chars<'a>>,
+    last_newline: u32,
+    line: u32
 }
 
 impl<'a> Lexer<'a> {
@@ -41,7 +43,9 @@ impl<'a> Lexer<'a> {
         return Lexer {
             _text: text,
             pos: 0,
-            iter: text.chars().peekable()
+            iter: text.chars().peekable(),
+            last_newline: 0,
+            line: 1
         }
     }
 
@@ -65,7 +69,12 @@ impl<'a> Lexer<'a> {
 
     /// Skips consecutive whitespace characters
     fn skip_whitespace(&mut self) {
-        while let Some(' ' | '\n' | '\r' | '\t') = self.current_char() {
+        while let c @ Some(' ' | '\n' | '\r' | '\t') = self.current_char() {
+            if let Some('\n') = c {
+                self.last_newline = self.pos;
+                self.line += 1;
+            }
+            
             self.advance();
         }
     }
@@ -96,7 +105,7 @@ impl<'a> Lexer<'a> {
     }
 
     /// Returns the next token, or `Token::EOF` if at end-of-string
-    pub fn next_token(&mut self) -> Result<Token, Error> {
+    pub fn next_token(&mut self) -> Result<(Token, u32, u32), Error> {
         if let Some(c) = self.current_char() {
             let token = match c {
                 ' ' | '\n' | '\r' | '\t' => {
@@ -147,8 +156,10 @@ impl<'a> Lexer<'a> {
                     desc: "The lexer does not know how to handle this".to_owned()
                 })
             };
-            return Ok(token);
+            let col = self.pos - self.last_newline;
+            return Ok((token, self.line, col));
         }
-        return Ok(Token::EOF);
+        let col = self.pos - self.last_newline;
+        return Ok((Token::EOF, self.line, col));
     }
 }

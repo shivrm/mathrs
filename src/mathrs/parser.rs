@@ -116,15 +116,20 @@ pub enum AstNode {
 pub struct Parser<'a> {
     lexer: Lexer<'a>,
     current_token: Token,
+    line: u32,
+    col: u32
 }
 
 impl<'a> Parser<'a> {
     /// Creates a new parser
     pub fn new(text: &'a str) -> Result<Self, Error> {
         let mut lexer = Lexer::new(text);
+        let (token, line, col) = lexer.next_token()?;
         Ok(Parser {
-            current_token: lexer.next_token()?,
-            lexer,
+            current_token: token,
+            line,
+            col,
+            lexer
         })
     }
 
@@ -133,7 +138,11 @@ impl<'a> Parser<'a> {
     /// token will be of the correct type.
     #[inline]
     fn advance(&mut self) -> Result<(), Error> {
-        self.current_token = self.lexer.next_token()?;
+        let (token, line, col) = self.lexer.next_token()?;
+        println!("{token:?} {line} {col}");
+        self.current_token = token;
+        self.line = line;
+        self.col = col;
         Ok(())
     }
 
@@ -145,8 +154,7 @@ impl<'a> Parser<'a> {
                 desc: format!("Current token was {:?}", self.current_token)
             })
         }
-        self.current_token = self.lexer.next_token()?;
-        Ok(())
+        self.advance()
     }
 
     /// Parses an operand
