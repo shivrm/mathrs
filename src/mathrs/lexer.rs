@@ -21,6 +21,7 @@ pub enum Token {
 
     OpenParen,
     CloseParen,
+    Period,
 
     Operator(Ops),
     EOF
@@ -129,6 +130,10 @@ impl<'a> Lexer<'a> {
                 ')' => {
                     self.advance();
                     Token::CloseParen
+                }
+                '.' => {
+                    self.advance();
+                    Token::Period
                 }
                 '+' => {
                     self.advance();

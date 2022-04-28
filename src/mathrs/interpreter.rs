@@ -5,7 +5,8 @@ use crate::mathrs::parser::AstNode;
 pub fn interpret(node: AstNode) -> f64 {
     match node {
         AstNode::Number(n) => n as f64,
-        
+        AstNode::Float(n) => n,
+
         AstNode::BinOp {left, op, right} => {
             let left = interpret(*left);
             let right = interpret(*right);

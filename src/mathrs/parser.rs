@@ -25,6 +25,7 @@ pub enum AstNode {
         operand: Box<AstNode>,
     },
     Number(i32),
+    Float(f64)
 }
 
 /// Used to parse the code
@@ -105,7 +106,24 @@ impl<'a> Parser<'a> {
         match self.current_token {
             Token::Number(n) => {
                 self.advance()?;
-                Ok(AstNode::Number(n))
+
+                if let Token::Period = self.current_token {
+                    self.advance()?;
+                    if let Token::Number(d) = self.current_token {
+                        self.advance()?;
+                        let value: f64 = format!("{n}.{d}").parse().unwrap();
+                        Ok(AstNode::Float(value))
+                    } else {
+                        Err(Error {
+                            title: "Decimal point without decimal digits".to_owned(),
+                            desc: "Parser found a decimal point with no following digits".to_owned(),
+                            line: self.line, col: self.col
+                        })
+                    }
+                }
+                else {
+                    Ok(AstNode::Number(n))
+                }
             }
             
             Token::OpenParen => {
