@@ -26,7 +26,7 @@ fn main() {
     }
 
     match mathrs::eval(&mut text) {
-        Ok(n) => println!("Value {n}"),
-        Err(e) => println!("Error: {e}")
+        Ok(n) => println!("Value: \x1b[32m{n}\x1b[0m"),
+        Err(e) => println!("{e}")
     }
 }

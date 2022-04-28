@@ -17,7 +17,7 @@ pub struct Error {
 
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} at line {}, column {}\n{}", self.title, self.line, self.col, self.desc)
+        write!(f, "\x1b[31m{} at line {}, column {}\n{}\x1b[0m", self.title, self.line, self.col, self.desc)
     }
 }
 
