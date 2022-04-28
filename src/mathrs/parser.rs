@@ -223,8 +223,19 @@ impl<'a> Parser<'a> {
         mut nodes: Vec<AstNode>,
         mut ops: Vec<ShuntOp>,
     ) -> Result<(Vec<AstNode>, Vec<ShuntOp>), Error> {
+
+        // Unary operator check
+        if op.1 && op.0 != Ops::Add && op.0 != Ops::Sub {
+            return Err(Error {
+                title: "Invalid unary operator".to_owned(),
+                desc: "Only + and - can be used as unary operators".to_owned(),
+                line: self.line, col: self.col
+            })
+        }
+
         // While operator stack is not empty check if top operator has higher precedence
         // and apply that first... (https://en.wikipedia.org/wiki/Shunting-yard_algorithm)
+        
         while !ops.is_empty() {
             let top_op = ops.pop().unwrap();
             if self.precedence(top_op)? > self.precedence(op)?
